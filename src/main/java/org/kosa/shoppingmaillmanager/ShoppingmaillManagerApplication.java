@@ -9,6 +9,7 @@ public class ShoppingmaillManagerApplication {
     public static void main(String[] args) {
         SpringApplication.run(ShoppingmaillManagerApplication.class, args);
         // 안녕
+        // 안녕
     }
 
 }
