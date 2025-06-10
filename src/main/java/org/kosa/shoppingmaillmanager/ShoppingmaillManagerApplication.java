@@ -11,6 +11,7 @@ public class ShoppingmaillManagerApplication {
         // 안녕
         // 안녕
         // 안녕안녕fhgfhgfh
+        // 진짜안녕
     }
 
 }
