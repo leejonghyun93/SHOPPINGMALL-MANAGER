@@ -33,6 +33,17 @@ dependencies {
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:2.3.0'  // MyBatis 스프링 부트 스타터
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'          // JDBC 지원
+    runtimeOnly 'com.mysql:mysql-connector-j'                                  // MySQL 드라이버 (DB에 따라 변경)
+	
+	// JWT
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+	
+	// Security
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 }
 
 tasks.named('test') {
