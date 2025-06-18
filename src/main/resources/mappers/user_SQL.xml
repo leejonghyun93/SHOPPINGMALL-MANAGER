@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="org.kosa.shoppingmaillmanager.user.UserDAO">
+
+	<sql id="search">
+		<if test="searchValue != null and searchValue != ''">
+			WHERE userid LIKE concat(concat('%', #{searchValue}), '%')
+		</if>
+	</sql>
+	
+	<select id="getUser" resultType="org.kosa.shoppingmaillmanager.user.User">
+		SELECT m.*,
+		h.business_no, h.bank_name, h.account_no, h.channel_name,
+		h.intro, h.status,  h.approved_yn
+		FROM tb_member m left join tb_host h ON m.user_id = h.user_id
+		WHERE m.user_id = #{user_id}
+	</select>
+	
+	
+	<insert id="insertMember">
+		INSERT into tb_member 
+		(user_id, password, name, email, phone, zipcode, address, birth_date, gender, profile_img, marketing_agree)
+		VALUES (#{user_id}, #{password}, #{name}, #{email}, #{phone}, 
+		#{zipcode}, #{address}, #{birth_date}, #{gender}, #{profile_img}, #{marketing_agree})
+	</insert>
+	
+	<insert id="insertHost">
+		INSERT into tb_host
+		(user_id, business_no, bank_name, account_no, channel_name, intro)
+		VALUES (#{user_id}, #{business_no}, #{bank_name}, #{account_no}, 
+		#{channel_name}, #{intro})
+	</insert>
+	
+	<update id="setLoginTime" parameterType="String">
+		UPDATE tb_member SET
+			last_login = now()
+		WHERE user_id = #{user_id}
+	</update>
+	
+	<update id="increaseFailCount">
+	  UPDATE tb_member SET login_fail_cnt = login_fail_cnt + 1 WHERE user_id = #{userid}
+	</update>
+	
+	<select id="getFailCount"  resultType="java.lang.Integer">
+	    SELECT COALESCE(login_fail_cnt, 0) FROM tb_member WHERE user_id = #{user_id}
+	</select>
+	
+	<update id="lockUser">
+	    UPDATE tb_member SET status = 'N' WHERE user_id = #{user_id}
+	</update>
+	
+	<update id="resetFailCount" parameterType="String">
+		UPDATE tb_member SET login_fail_cnt = 0, status = 'Y' WHERE user_id = #{user_id}
+	</update>
+</mapper>
