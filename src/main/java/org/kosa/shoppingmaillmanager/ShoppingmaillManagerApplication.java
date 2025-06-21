@@ -10,6 +10,8 @@ public class ShoppingmaillManagerApplication {
         SpringApplication.run(ShoppingmaillManagerApplication.class, args);
         // 안녕
         // 안녕
+        // 안녕안녕fhgfhgfh
+        // 진짜안녕
     }
 
 }
