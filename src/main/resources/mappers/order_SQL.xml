@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="org.kosa.shoppingmaillmanager.host.order.OrderDAO">
+	
+	<!-- ✅ resultMap 정의 -->
+    <resultMap id="orderListMap" type="org.kosa.shoppingmaillmanager.host.order.OrderListDTO">
+        <id property="order_id" column="order_id"/>
+        <result property="user_id" column="user_id"/>
+        <result property="user_name" column="user_name"/>
+        <result property="order_date" column="order_date"/>
+        <result property="order_status" column="order_status"/>
+        <result property="total_price" column="total_price"/>
+
+        <collection property="orderItems" ofType="org.kosa.shoppingmaillmanager.host.order.OrderItem">
+            <id property="order_item_id" column="order_item_id"/>
+            <result property="product_id" column="product_id"/>
+            <result property="name" column="product_name"/>
+            <result property="quantity" column="quantity"/>
+            <result property="status" column="status"/>
+            <result property="total_price" column="total_price"/>
+            <result property="delivery_fee" column="delivery_fee"/>
+            <result property="image_url" column="image_url"/>
+            <result property="created_date" column="created_date"/>
+            <result property="updated_date" column="updated_date"/>
+        </collection>
+    </resultMap>
+    
+    <resultMap id="orderDetailMap" type="org.kosa.shoppingmaillmanager.host.order.OrderDetailDTO">
+	  <id property="order_id" column="order_id"/>
+	  <result property="user_id" column="user_id"/>
+	  <result property="order_date" column="order_date"/>
+	  <result property="user_name" column="user_name"/>
+	  <result property="phone" column="phone"/>
+	  <result property="email" column="email"/>
+	  <result property="recipient_name" column="recipient_name"/>
+	  <result property="recipient_phone" column="recipient_phone"/>
+	  <result property="order_zipcode" column="order_zipcode"/>
+	  <result property="order_address_detail" column="order_address_detail"/>
+	  <result property="delivery_memo" column="delivery_memo"/>
+	  <result property="order_memo" column="order_memo"/>
+	  <result property="total_price" column="total_price"/>
+	  <result property="delivery_fee" column="delivery_fee"/>
+	  <result property="discount_amount" column="discount_amount"/>
+	  <result property="original_total_price" column="original_total_price"/>
+	  <result property="final_payment_amount" column="final_payment_amount"/>
+	
+	  <!-- 주문 상품들 -->
+	  <collection property="orderItems" ofType="org.kosa.shoppingmaillmanager.host.order.OrderItemDTO">
+	    <result property="quantity" column="quantity"/>
+	    <result property="item_name" column="item_name"/>
+	    <result property="item_image_url" column="image_url"/>
+	    <result property="item_status" column="item_status"/>
+	    <result property="item_total_price" column="item_total_price"/>
+	    <result property="item_delivery_fee" column="item_delivery_fee"/>
+	    <result property="item_point_earned" column="point_earned"/>
+	  </collection>
+	</resultMap>
+	
+	<select id="list" resultMap="orderListMap">
+	    SELECT 
+	        o.order_id, 
+	        o.user_id, 
+	        o.order_date, 
+	        o.order_status, 
+	        o.total_price, 
+	        m.name as user_name, 
+	        i.name as product_name, 
+	        i.image_url,
+	        i.quantity 
+	    FROM 
+	    tb_order o 
+	    LEFT JOIN tb_member m ON o.user_id = m.user_id 
+	    LEFT JOIN tb_order_item i ON o.order_id = i.order_id
+	    
+		ORDER BY o.order_date desc
+	    LIMIT #{size} OFFSET #{start}
+	</select>
+	
+	<select id="getTotalCount" resultType="int">
+		SELECT count(*) FROM
+	    tb_order o 
+	    LEFT JOIN tb_member m ON o.user_id = m.user_id 
+	    LEFT JOIN tb_order_item i ON o.order_id = i.order_id
+	</select>
+	
+	<select id="getOrder" resultMap="orderDetailMap">
+		SELECT
+		  o.order_id,
+		  o.user_id,
+		  o.order_date,
+		  m.name AS user_name,
+		  o.phone,
+		  o.email,
+		  o.recipient_name,
+		  o.recipient_phone,
+		  o.order_zipcode,
+		  o.order_address_detail,
+		  o.delivery_memo,
+		  o.order_memo,
+		  o.total_price,
+		  o.delivery_fee,
+		  o.discount_amount,
+		  o.original_total_price,
+		  o.final_payment_amount,
+		  i.quantity,
+		  i.name AS item_name,
+		  i.image_url,
+		  i.status AS item_status,
+		  i.total_price AS item_total_price,
+		  i.delivery_fee AS item_delivery_fee,
+		  i.point_earned
+		  
+		  from tb_order o left join tb_order_item i on o.order_id = i.order_id
+		  left join tb_member m on o.user_id = m.user_id
+		  where o.order_id = #{order_id}
+	</select>
+</mapper>

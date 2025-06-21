@@ -23,9 +23,11 @@
 	
 	<insert id="insertMember">
 		INSERT into tb_member 
-		(user_id, password, name, email, phone, zipcode, address, birth_date, gender, profile_img, marketing_agree)
+		(user_id, password, name, email, phone, zipcode, address, birth_date,
+		 gender, profile_img, marketing_agree, grade_id)
 		VALUES (#{user_id}, #{password}, #{name}, #{email}, #{phone}, 
-		#{zipcode}, #{address}, #{birth_date}, #{gender}, #{profile_img}, #{marketing_agree})
+		#{zipcode}, #{address}, #{birth_date}, #{gender}, 
+		#{profile_img}, #{marketing_agree}, "HOST")
 	</insert>
 	
 	<insert id="insertHost">
@@ -55,5 +57,19 @@
 	
 	<update id="resetFailCount" parameterType="String">
 		UPDATE tb_member SET login_fail_cnt = 0, status = 'Y' WHERE user_id = #{user_id}
+	</update>
+	
+	<select id="findByNameAndEmail"  resultType="org.kosa.shoppingmaillmanager.user.User">
+	  SELECT * FROM tb_member
+	  WHERE name = #{name} AND email = #{email}
+	</select>
+	
+	<select id="findByUserIdAndEmail"  resultType="org.kosa.shoppingmaillmanager.user.User">
+	  SELECT * FROM tb_member
+	  WHERE user_id = #{user_id} AND email = #{email}
+	</select>
+	
+	<update id="updatePassword">
+	    UPDATE tb_member SET password = #{password} WHERE user_id = #{user_id}
 	</update>
 </mapper>
