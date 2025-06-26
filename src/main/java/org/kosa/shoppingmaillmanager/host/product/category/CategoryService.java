@@ -17,7 +17,7 @@ public class CategoryService {
 
     // flat list를 트리로 변환
     public List<CategoryTreeDTO> buildCategoryTree(List<CategoryTreeDTO> flatList) {
-        Map<Long, CategoryTreeDTO> map = new HashMap<>();
+        Map<Integer, CategoryTreeDTO> map = new HashMap<>();
         List<CategoryTreeDTO> roots = new ArrayList<>();
 
         for (CategoryTreeDTO dto : flatList) {
@@ -48,22 +48,22 @@ public class CategoryService {
     }
 
     // 특정 대분류 ID와 그 하위 모든 카테고리 ID 리스트 반환
-    public List<Long> getCategoryAndAllChildIds(Long mainCategoryId) {
+    public List<Integer> getCategoryAndAllChildIds(Integer mainCategoryId) {
         List<CategoryTreeDTO> flatList = categoryDAO.selectCategoryTree();
 
-        Map<Long, CategoryTreeDTO> map = new HashMap<>();
+        Map<Integer, CategoryTreeDTO> map = new HashMap<>();
         for (CategoryTreeDTO dto : flatList) {
             map.put(dto.getCategoryId(), dto);
         }
 
-        List<Long> result = new ArrayList<>();
+        List<Integer> result = new ArrayList<>();
         collectChildCategoryIds(mainCategoryId, map, result);
 
         return result;
     }
 
     // 재귀적으로 하위 카테고리 ID 모두 수집하는 헬퍼 메서드
-    private void collectChildCategoryIds(Long parentId, Map<Long, CategoryTreeDTO> map, List<Long> result) {
+    private void collectChildCategoryIds(Integer parentId, Map<Integer, CategoryTreeDTO> map, List<Integer> result) {
         if (!result.contains(parentId)) {
             result.add(parentId);
         }
