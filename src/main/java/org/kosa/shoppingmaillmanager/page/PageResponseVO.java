@@ -38,4 +38,7 @@ public class PageResponseVO<T>{
 	public boolean isNext() {
 		return totalPage != endPage;
 	}
+	public int getTotalPages() {
+        return (int) Math.ceil((double) totalCount / size);
+    }
 }

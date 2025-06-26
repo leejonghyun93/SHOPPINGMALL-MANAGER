@@ -3,6 +3,7 @@ package org.kosa.shoppingmaillmanager.host.order;
 import java.util.List;
 
 import lombok.Data;
+import lombok.Getter;
 
 @Data
 public class OrderDetailDTO {
@@ -10,7 +11,7 @@ public class OrderDetailDTO {
 	private String order_id; // 주문 id
 	private String user_id;  // 주문자 id
 	private String order_date; // 주문일시
-	private String order_status; // 주문상태
+	private List<String> order_status; // 주문상태
 	private String phone; // 주문자 전화번호
 	private String email; // 주문자 이메일
 	private String recipient_name; // 수령인 이름
@@ -19,6 +20,7 @@ public class OrderDetailDTO {
 	private String order_address_detail; // 주문 상세주소
 	private String delivery_memo; // 배송 메모
 	private String order_memo; // 주문관리 메모 
+	private List<String>payment_method; // 결제방식
 	
 	private int total_price; // 총 주문상품 가격
 	private int delivery_fee; // 총 배송비
