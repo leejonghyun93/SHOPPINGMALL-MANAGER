@@ -1,15 +1,23 @@
 package org.kosa.shoppingmaillmanager.host.product;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
-
 import org.kosa.shoppingmaillmanager.host.product.category.CategoryDAO;
 import org.kosa.shoppingmaillmanager.host.product.category.CategoryTreeDTO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.kosa.shoppingmaillmanager.host.product.dto.OptionDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductCreateRequest;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO;
+import org.kosa.shoppingmaillmanager.host.product.entity.Product;
+import org.kosa.shoppingmaillmanager.host.product.entity.ProductOption;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,91 +27,57 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final CategoryDAO categoryDAO; // MyBatis DAO
+    private final ProductOptionRepository productOptionRepository;
+    private final ProductDAO productDAO;
+    private final CategoryDAO categoryDAO;
 
-    public Page<ProductDTO> getAllProducts(Pageable pageable, String status, Long categoryId, String keyword) {
-        System.out.println("검색 쿼리 실행! keyword=" + keyword);
+    private static final String MAIN_IMAGE_UPLOAD_DIR = "C:/upload/product/main/";
 
-        // 전체 카테고리 트리 한 번만 조회
-        List<CategoryTreeDTO> allCategories = categoryDAO.selectCategoryTree();
+    private List<CategoryTreeDTO> cachedCategoryTree;
 
-        List<Long> categoryIds = null;
-        if (categoryId != null) {
-            // 하위 카테고리 포함 모든 카테고리 ID 수집
-            categoryIds = findAllDescendantCategoryIds(categoryId, allCategories);
+    private List<CategoryTreeDTO> getCategoryTreeCached() {
+        if (cachedCategoryTree == null) {
+            cachedCategoryTree = categoryDAO.selectCategoryTree();
         }
-
-        Page<Product> page;
-
-        // --- 검색 조건 추가 ---
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            // 카테고리, 상태, 키워드 모두 있는 경우
-            if (categoryIds != null && !categoryIds.isEmpty()) {
-                List<String> categoryIdsStr = categoryIds.stream().map(String::valueOf).collect(Collectors.toList());
-
-                if (status != null && !status.isEmpty() && !status.equals("ALL")) {
-                    page = productRepository.findByCategoryIdInAndProductStatusAndKeyword(
-                        categoryIdsStr, status, keyword, pageable);
-                } else {
-                    page = productRepository.findByCategoryIdInAndKeyword(
-                        categoryIdsStr, keyword, pageable);
-                }
-            } else {
-                if (status != null && !status.isEmpty() && !status.equals("ALL")) {
-                    page = productRepository.findByProductStatusAndKeyword(
-                        status, keyword, pageable);
-                } else {
-                    page = productRepository.findByKeyword(keyword, pageable);
-                }
-            }
-        } else {
-            // 기존 로직 (키워드 없을 때)
-            if (categoryIds != null && !categoryIds.isEmpty()) {
-                List<String> categoryIdsStr = categoryIds.stream().map(String::valueOf).collect(Collectors.toList());
-
-                if (status != null && !status.isEmpty() && !status.equals("ALL")) {
-                    page = productRepository.findByCategoryIdInAndProductStatus(
-                        categoryIdsStr, status, pageable);
-                } else {
-                    page = productRepository.findByCategoryIdIn(
-                        categoryIdsStr, pageable);
-                }
-            } else {
-                if (status != null && !status.isEmpty() && !status.equals("ALL")) {
-                    page = productRepository.findByProductStatus(status, pageable);
-                } else {
-                    page = productRepository.findAll(pageable);
-                }
-            }
-        }
-
-        // 상품 → DTO 변환시 카테고리명 세팅 (유틸리티 메서드 활용)
-        return page.map(product -> {
-            ProductDTO dto = ProductDTO.fromEntity(product);
-            // 카테고리명 세팅
-            if (product.getCategoryId() != null) {
-                try {
-                    String[] names = CategoryTreeDTO.getCategoryNames(Long.valueOf(product.getCategoryId()), allCategories);
-                    dto.setMainCategoryName(names[0]);
-                    dto.setMidCategoryName(names[1]);
-                    dto.setSubCategoryName(names[2]);
-                } catch (Exception e) {
-                    // 예외 발생 시 카테고리명은 null로 둠
-                }
-            }
-            // 진열여부 세팅 (displayYn → displayStatus로)
-            dto.setDisplayYn(product.getDisplayYn());
-            return dto;
-        });
+        return cachedCategoryTree;
     }
 
-    private List<Long> findAllDescendantCategoryIds(Long rootId, List<CategoryTreeDTO> allCategories) {
-        Set<Long> result = new HashSet<>();
+    public ProductListResponse getAllProducts(int page, int size, String status, Integer categoryId, String keyword) {
+        List<CategoryTreeDTO> allCategories = getCategoryTreeCached();
+
+        int offset = Math.max(0, (page - 1) * size);
+        Map<String, Object> params = new HashMap<>();
+        params.put("offset", offset);
+        params.put("limit", size);
+
+        if (categoryId != null) {
+            params.put("categoryIds", findAllDescendantCategoryIds(categoryId, allCategories));
+        }
+        if (status != null && !status.isEmpty() && !"ALL".equals(status)) {
+            params.put("status", status);
+        }
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            params.put("keyword", keyword.trim());
+        }
+
+        List<ProductDTO> content = productDAO.selectProductListWithCategory(params);
+
+        params.remove("offset");
+        params.remove("limit");
+        int totalElements = productDAO.selectProductListWithCategory(params).size();
+
+        Map<String, Long> statusCounts = getProductStatusCounts();
+
+        return new ProductListResponse(content, totalElements, statusCounts);
+    }
+
+    private List<Integer> findAllDescendantCategoryIds(Integer rootId, List<CategoryTreeDTO> allCategories) {
+        Set<Integer> result = new HashSet<>();
         findDescendants(rootId, allCategories, result);
         return new ArrayList<>(result);
     }
 
-    private void findDescendants(Long parentId, List<CategoryTreeDTO> allCategories, Set<Long> result) {
+    private void findDescendants(Integer parentId, List<CategoryTreeDTO> allCategories, Set<Integer> result) {
         result.add(parentId);
         for (CategoryTreeDTO cat : allCategories) {
             if (parentId.equals(cat.getParentCategoryId())) {
@@ -121,12 +95,104 @@ public class ProductService {
         return counts;
     }
 
-    // 진열여부 토글 API
     @Transactional
-    public void updateDisplayYn(String productId, String displayYn) {
+    public void updateDisplayYn(Integer productId, String displayYn) {
         int updated = productRepository.updateDisplayYn(productId, displayYn);
         if (updated == 0) {
             throw new IllegalArgumentException("상품을 찾을 수 없습니다: " + productId);
+        }
+    }
+
+    public ProductDTO getProductById(Integer productId) {
+        Product product = productRepository.findById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. productId=" + productId));
+
+        ProductDTO dto = ProductDTO.fromEntity(product);
+        List<CategoryTreeDTO> allCategories = getCategoryTreeCached();
+
+        if (product.getCategoryId() != null) {
+            try {
+                String[] names = CategoryTreeDTO.getCategoryNames(product.getCategoryId(), allCategories);
+                dto.setMainCategoryName(names[0]);
+                dto.setMidCategoryName(names[1]);
+                dto.setSubCategoryName(names[2]);
+            } catch (Exception e) {
+                // 카테고리명 예외 무시
+            }
+        }
+        dto.setDisplayYn(product.getDisplayYn());
+        return dto;
+    }
+
+    @Transactional
+    public void updateProductField(Integer productId, Map<String, Object> updates) {
+        Product product = productRepository.findById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. productId=" + productId));
+
+        updates.forEach((k, v) -> {
+            switch (k) {
+                case "stock" -> product.setStock((Integer) v);
+                case "salePrice" -> product.setSalePrice((Integer) v);
+                case "status" -> product.setProductStatus((String) v);
+                // 추가 필드 필요시 확장
+            }
+        });
+
+        productRepository.save(product);
+    }
+
+    @Transactional
+    public void createProduct(ProductCreateRequest req) {
+
+        String mainImageUrl = null;
+        MultipartFile mainImage = req.getMainImage();
+
+        if (mainImage != null && !mainImage.isEmpty()) {
+            String ext = StringUtils.getFilenameExtension(mainImage.getOriginalFilename());
+            String uuidFileName = UUID.randomUUID() + (ext != null ? "." + ext : "");
+            File dest = new File(MAIN_IMAGE_UPLOAD_DIR, uuidFileName);
+
+            try {
+                mainImage.transferTo(dest);
+                mainImageUrl = "/upload/product/main/" + uuidFileName;
+            } catch (IOException e) {
+                throw new RuntimeException("대표이미지 파일 저장 실패", e);
+            }
+        }
+
+        Product product = new Product();
+        product.setHostId(1L);
+        product.setCategoryId(req.getCategoryId());
+        product.setName(req.getName());
+        product.setPrice(req.getPrice());
+        product.setSalePrice(req.getSalePrice());
+        product.setProductShortDescription(req.getProductShortDescription());
+        product.setProductDescription(req.getProductDescription()); // HTML 그대로 저장
+        product.setStock(req.getStock());
+        product.setProductStatus(req.getProductStatus());
+        product.setCreatedDate(LocalDateTime.now());
+        product.setMainImage(mainImageUrl);
+        product.setDisplayYn("Y");
+
+        productRepository.save(product);
+
+        // 옵션 저장
+        if (req.getOptions() != null && !req.getOptions().isEmpty()) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                List<OptionDTO> options = mapper.readValue(req.getOptions(), new TypeReference<>() {});
+                for (OptionDTO opt : options) {
+                    ProductOption option = new ProductOption();
+                    option.setProductId(product.getProductId());
+                    option.setOptionName(opt.getOptionName());
+                    option.setSalePrice(opt.getSalePrice());
+                    option.setStock(opt.getStock());
+                    option.setStatus(opt.getStatus());
+                    productOptionRepository.save(option);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("옵션 파싱/저장 실패", e);
+            }
         }
     }
 }

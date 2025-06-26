@@ -1,4 +1,4 @@
-package org.kosa.shoppingmaillmanager.host.product;
+package org.kosa.shoppingmaillmanager.host.product.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,25 +7,24 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.kosa.shoppingmaillmanager.host.product.entity.Product;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProductDTO {
-    private String productId;
-    private String categoryId;
+    private Integer productId;
+    private Integer categoryId;
     private String name;
     private Integer price;
     private Integer salePrice;
     private String productDescription;
     private String productShortDescription;
     private String productStatus;
-    private Integer productSalesCount;
     private BigDecimal productRating;
     private Integer productReviewCount;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
     private String mainImage;
     private Integer viewCount;
     private Integer stock;
@@ -48,13 +47,10 @@ public class ProductDTO {
             product.getProductDescription(),
             product.getProductShortDescription(),
             product.getProductStatus(),
-            product.getProductSalesCount(),
             product.getProductRating(),
             product.getProductReviewCount(),
             product.getCreatedDate(),
             product.getUpdatedDate(),
-            product.getStartDate(),
-            product.getEndDate(),
             product.getMainImage(),
             product.getViewCount(),
             product.getStock(),

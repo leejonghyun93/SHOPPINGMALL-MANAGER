@@ -1,4 +1,4 @@
-package org.kosa.shoppingmaillmanager.host.product;
+package org.kosa.shoppingmaillmanager.host.product.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -16,11 +16,9 @@ import java.time.LocalDateTime;
 public class Product {
 
     @Id
-    @Column(name = "PRODUCT_ID", length = 50)
-    private String productId;
-
-    @Column(name = "CATEGORY_ID", length = 50, nullable = false)
-    private String categoryId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "PRODUCT_ID")
+    private Integer productId;
 
     @Column(name = "NAME", length = 200, nullable = false)
     private String name;
@@ -28,7 +26,7 @@ public class Product {
     @Column(name = "PRICE", nullable = false)
     private Integer price;
 
-    @Column(name = "SALE_PRICE")
+    @Column(name = "SALE_PRICE", nullable = false)
     private Integer salePrice;
 
     @Column(name = "PRODUCT_DESCRIPTION", columnDefinition = "TEXT")
@@ -40,14 +38,11 @@ public class Product {
     @Column(name = "PRODUCT_STATUS", length = 20, nullable = false)
     private String productStatus;
 
-    @Column(name = "PRODUCT_SALES_COUNT")
-    private Integer productSalesCount;
-
     @Column(name = "PRODUCT_RATING", precision = 3, scale = 2)
-    private BigDecimal productRating;
+    private BigDecimal productRating = BigDecimal.ZERO;
 
     @Column(name = "PRODUCT_REVIEW_COUNT")
-    private Integer productReviewCount;
+    private Integer productReviewCount = 0;
 
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
@@ -55,21 +50,22 @@ public class Product {
     @Column(name = "UPDATED_DATE")
     private LocalDateTime updatedDate;
 
-    @Column(name = "START_DATE")
-    private LocalDateTime startDate;
-
-    @Column(name = "END_DATE")
-    private LocalDateTime endDate;
-
     @Column(name = "MAIN_IMAGE", length = 500)
     private String mainImage;
 
     @Column(name = "VIEW_COUNT")
-    private Integer viewCount;
+    private Integer viewCount = 0;
 
     @Column(name = "STOCK")
-    private Integer stock;
-    
-    @Column(name = "DISPLAY_YN", length = 1)
-    private String displayYn;
+    private Integer stock = 0;
+
+    @Column(name = "HOST_ID", nullable = false)
+    private Long hostId;
+
+    @Column(name = "CATEGORY_ID", nullable = false)
+    private Integer categoryId;
+
+    @Column(name = "DISPLAY_YN", length = 1, nullable = false)
+    private String displayYn = "Y";
+
 }
