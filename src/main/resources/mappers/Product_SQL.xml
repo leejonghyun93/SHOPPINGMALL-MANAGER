@@ -2,7 +2,7 @@
 <!DOCTYPE mapper
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.mapper.ProductDAO">
+<mapper namespace="org.kosa.shoppingmaillmanager.host.product.ProductDAO">
 
   <select id="selectProductListWithCategory" resultMap="ProductWithCategoryMap" parameterType="map">
     SELECT
@@ -14,13 +14,10 @@
       p.product_description,
       p.product_short_description,
       p.product_status,
-      p.product_sales_count,
       p.product_rating,
       p.product_review_count,
       p.created_date,
       p.updated_date,
-      p.start_date,
-      p.end_date,
       p.main_image,
       p.view_count,
       p.stock,
@@ -52,7 +49,7 @@
     </if>
   </select>
 
-  <resultMap id="ProductWithCategoryMap" type="org.kosa.shoppingmaillmanager.host.product.ProductDTO">
+  <resultMap id="ProductWithCategoryMap" type="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
     <result property="productId" column="product_id"/>
     <result property="categoryId" column="category_id"/>
     <result property="name" column="name"/>
@@ -61,13 +58,12 @@
     <result property="productDescription" column="product_description"/>
     <result property="productShortDescription" column="product_short_description"/>
     <result property="productStatus" column="product_status"/>
-    <result property="productSalesCount" column="product_sales_count"/>
+  
     <result property="productRating" column="product_rating"/>
     <result property="productReviewCount" column="product_review_count"/>
     <result property="createdDate" column="created_date"/>
     <result property="updatedDate" column="updated_date"/>
-    <result property="startDate" column="start_date"/>
-    <result property="endDate" column="end_date"/>
+    
     <result property="mainImage" column="main_image"/>
     <result property="viewCount" column="view_count"/>
     <result property="stock" column="stock"/>

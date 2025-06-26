@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDAO">
+
+  <!-- 1. 상품별 문의 목록 -->
+  <select id="selectInquiriesByProductId" parameterType="int" resultType="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDTO">
+    SELECT
+      q.QNA_ID as qnaId,
+      q.PRODUCT_ID as productId,
+      p.NAME as productName,
+      q.USER_ID as userId,
+      q.TITLE as title,
+      q.CONTENT as content,
+      q.QNA_STATUS as qnaStatus,
+      q.IS_SECRET as isSecret,
+      q.VIEW_COUNT as viewCount,
+      q.ANSWER_DATE as answerDate,
+      q.ANSWER_USER_ID as answerUserId,
+      q.CREATED_DATE as createdDate,
+      q.UPDATED_DATE as updatedDate
+    FROM tb_product_qna q
+    JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
+    WHERE q.PRODUCT_ID = #{productId}
+    ORDER BY q.CREATED_DATE DESC
+  </select>
+
+  <!-- 2. 문의 상세(상품명 포함) -->
+  <select id="selectInquiryDetail" parameterType="map" resultType="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDetailDTO">
+    SELECT
+      q.QNA_ID as qnaId,
+      q.PRODUCT_ID as productId,
+      p.NAME as productName,
+      q.USER_ID as userId,
+      q.TITLE as title,
+      q.CONTENT as content,
+      q.QNA_STATUS as qnaStatus,
+      q.IS_SECRET as isSecret,
+      q.VIEW_COUNT as viewCount,
+      q.ANSWER_USER_ID as answerUserId,
+      q.CREATED_DATE as createdDate,
+      q.UPDATED_DATE as updatedDate
+    FROM tb_product_qna q
+    JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
+    WHERE q.PRODUCT_ID = #{productId}
+      AND q.QNA_ID = #{qnaId}
+  </select>
+
+  <!-- 3. 문의 상태(QNA_STATUS) 변경 -->
+  <update id="updateQnaStatus" parameterType="map">
+    UPDATE tb_product_qna
+    SET QNA_STATUS = #{qnaStatus}
+    WHERE QNA_ID = #{qnaId}
+  </update>
+
+</mapper>
