@@ -40,6 +40,9 @@ public class BroadCast {
 	// 상품 목록
 	private List<BroadCastProduct> productList;
 	
+	// 상품 목록
+	private List<BroadCastViewer> viewerList;
+	
 	// 카테고리 불러오기
 	private CategoryTreeDTO category;
 }

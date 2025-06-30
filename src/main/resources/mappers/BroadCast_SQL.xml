@@ -17,7 +17,7 @@
 	    <result property="scheduled_end_time" column="scheduled_end_time"/>
 	    <result property="actual_start_time" column="actual_start_time"/>
 	    <result property="actual_end_time" column="actual_end_time"/>
-	    <result property="is_public" column="is_public"/>
+	    <result property="is_public" column="is_public" javaType="boolean"/>
 	    <result property="max_viewers" column="max_viewers"/>
 	    <result property="current_viewers" column="current_viewers"/>
 	    <result property="total_viewers" column="total_viewers"/>
@@ -55,7 +55,7 @@
 	    <result property="updated_at" column="updated_at"/>
 	
 	    <!-- Join된 상품 정보 -->
-	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.ProductDTO">
+	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
 	        <id property="productId" column="p_product_id"/>
 	        <result property="name" column="name"/>
 	        <result property="price" column="price"/>
@@ -64,12 +64,35 @@
 	    </association>
 	</resultMap>
 	
+	<resultMap id="productSearchMap" type="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct">
+	    <id  property="product_id" column="product_id"/>
+	
+	    <!-- Join된 상품 정보 -->
+	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
+	        <id property="productId" column="p_product_id"/>
+	        <result property="name" column="name"/>
+	        <result property="price" column="price"/>
+	        <result property="mainImage" column="main_image"/>
+	    </association>
+	</resultMap>
+	
+	<resultMap id="broadCastProductResultMap" type="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct">
+	    <result property="product_id" column="product_id"/>
+	
+	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
+	        <result property="name" column="name"/>
+	        <result property="price" column="price"/>
+	        <result property="mainImage" column="main_image"/>
+	    </association>
+	</resultMap>
+	
 	
 	<insert id="insert" parameterType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast"
         useGeneratedKeys="true" keyProperty="broadcast_id">
 		INSERT INTO tb_live_broadcasts
 		(broadcaster_id, title, description, category_id, stream_url, thumbnail_url,
-		 is_public, broadcast_status, scheduled_start_time, created_at, stream_key)
+		 is_public, broadcast_status, scheduled_start_time,
+		 scheduled_end_time, created_at, stream_key)
 		VALUES (
 			#{broadcaster_id}, 
 			#{title}, 
@@ -80,6 +103,7 @@
 			#{is_public},
 			#{broadcast_status}, 
 			#{scheduled_start_time}, 
+			#{scheduled_end_time}, 
 			now(),
 			#{stream_key}
 		)
@@ -93,7 +117,7 @@
 	</insert>
 	
 	<select id="selectByBroadcastId" resultMap="broadCastProductMap">
-    SELECT 
+    	SELECT 
         bp.broadcast_id,
         bp.product_id,
 
@@ -107,5 +131,66 @@
 	    LEFT JOIN tb_product p ON bp.product_id = p.product_id
 	    WHERE bp.broadcast_id = #{broadcast_id}
 	</select>
+	
+	<select id="findByKeyword" resultMap="productSearchMap">
+        SELECT 
+        bp.product_id,
+        
+		p.product_id as p_product_id,
+        p.name,
+        p.price,
+        p.main_image
+
+	    FROM tb_broadcast_products bp
+	    RIGHT JOIN tb_product p ON bp.product_id = p.product_id
+	    WHERE p.name LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+    
+    <select id="findBroadcastById" resultType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast">
+	    SELECT
+	        broadcast_id,
+	        broadcaster_id,
+	        title,
+	        description,
+	        stream_url,
+	        total_viewers,
+	        like_count,
+	        scheduled_start_time,
+	        scheduled_end_time
+	    FROM tb_live_broadcasts
+	    WHERE broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findProductsByBroadcastId" resultMap="broadCastProductResultMap">
+	    SELECT
+	        bp.product_id,
+	        p.name,
+	        p.price,
+	        p.main_image
+	    FROM tb_broadcast_products bp
+	    JOIN tb_product p ON bp.product_id = p.product_id
+	    WHERE bp.broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findViewersByBroadcastId" resultType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastViewer">
+	    SELECT
+	        user_id,
+	        username,
+	        joined_at,
+	        left_at,
+	        watch_duration
+	    FROM tb_live_broadcast_viewers
+	    WHERE broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findById" resultType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast">
+	    SELECT * FROM tb_live_broadcasts WHERE broadcast_id = #{broadcast_id}
+	</select>
+	
+	<update id="updateStatus">
+	    UPDATE tb_live_broadcasts
+	    SET broadcast_status = #{broadcast_status}
+	    WHERE broadcast_id = #{broadcast_id}
+	</update>
 	
 </mapper>

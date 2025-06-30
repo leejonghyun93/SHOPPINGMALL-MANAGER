@@ -1,7 +1,5 @@
 package org.kosa.shoppingmaillmanager.host.broadcast;
 
-
-
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO;
 
 import lombok.AllArgsConstructor;
