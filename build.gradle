@@ -36,6 +36,7 @@ configurations.all {
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -73,6 +74,7 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-util:9.4.49.v20220914'
     implementation 'org.eclipse.jetty:jetty-http:9.4.49.v20220914'
     implementation 'org.eclipse.jetty.websocket:websocket-client:9.4.49.v20220914'
+
 }
 
 tasks.named('test') {

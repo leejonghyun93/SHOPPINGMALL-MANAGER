@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kosa.shoppingmaillmanager.chat.ChatDAO">
+
+  <insert id="insertChatMessage">
+    INSERT INTO tb_live_broadcast_chats (
+      broadcast_id,
+      user_id,
+      message,
+      message_type,
+      is_deleted,
+      is_blurred,
+      is_pinned,
+      product_id
+    ) VALUES (
+      #{broadcastId},
+      #{userId},
+      #{text},
+      #{type},
+      #{isDeleted},
+      #{isBlurred},
+      #{isPinned},
+      #{productId}
+    )
+  </insert>
+  
+ <select id="getChatMessagesByBroadcastId" resultType="org.kosa.shoppingmaillmanager.chat.ChatMessageDTO">
+  SELECT
+    c.user_id AS userId,
+    m.nickname AS 'from',
+    c.broadcast_id AS broadcastId,
+    c.message AS text,
+    c.message_type AS type,
+    c.is_blurred AS isBlurred,
+    c.is_deleted AS isDeleted,
+    c.is_pinned AS isPinned,
+    c.created_at
+  FROM tb_live_broadcast_chats c
+  JOIN tb_member m ON c.user_id = m.USER_ID
+  WHERE c.broadcast_id = #{broadcastId}
+  ORDER BY c.created_at ASC
+</select>
+
+</mapper>
