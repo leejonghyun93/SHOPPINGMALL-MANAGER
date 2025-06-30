@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastDAO">
+	
+	<resultMap id="broadCastResultMap" type="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast">
+	    <!-- 기본 정보 -->
+	    <id property="broadcast_id" column="broadcast_id"/>
+	    <result property="broadcaster_id" column="broadcaster_id"/>
+	    <result property="title" column="title"/>
+	    <result property="description" column="description"/>
+	    <result property="broadcast_status" column="broadcast_status"/>
+	    <result property="scheduled_start_time" column="scheduled_start_time"/>
+	    <result property="scheduled_end_time" column="scheduled_end_time"/>
+	    <result property="actual_start_time" column="actual_start_time"/>
+	    <result property="actual_end_time" column="actual_end_time"/>
+	    <result property="is_public" column="is_public" javaType="boolean"/>
+	    <result property="max_viewers" column="max_viewers"/>
+	    <result property="current_viewers" column="current_viewers"/>
+	    <result property="total_viewers" column="total_viewers"/>
+	    <result property="peak_viewers" column="peak_viewers"/>
+	    <result property="like_count" column="like_count"/>
+	    <result property="thumbnail_url" column="thumbnail_url"/>
+	    <result property="stream_url" column="stream_url"/>
+	    <result property="category_id" column="category_id"/>
+	    <result property="tags" column="tags"/>
+	    <result property="created_at" column="created_at"/>
+	    <result property="updated_at" column="updated_at"/>
+	    <result property="stream_key" column="stream_key"/>
+	
+		<!-- 연관된 카테고리 -->
+    	<association property="category"
+                 javaType="org.kosa.shoppingmaillmanager.host.product.category.CategoryTreeDTO"
+                 column="category_id"
+                 select="org.kosa.shoppingmaillmanager.host.product.category.CategoryDAO.selectCategoryTree"/>
+                 
+	    <!-- 연관된 상품 목록 -->
+	    <collection property="productList"
+	                ofType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct"
+	                column="broadcast_id"
+	                select="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastDAO.selectByBroadcastId"/>
+	</resultMap>
+	
+	<resultMap id="broadCastProductMap" type="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct">
+	    <id property="broadcast_product_id" column="broadcast_product_id"/>
+	    <result property="broadcast_id" column="broadcast_id"/>
+	    <result property="product_id" column="product_id"/>
+	    <result property="display_order" column="display_order"/>
+	    <result property="is_featured" column="is_featured"/>
+	    <result property="special_price" column="special_price"/>
+	    <result property="created_at" column="created_at"/>
+	    <result property="updated_at" column="updated_at"/>
+	
+	    <!-- Join된 상품 정보 -->
+	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
+	        <id property="productId" column="p_product_id"/>
+	        <result property="name" column="name"/>
+	        <result property="price" column="price"/>
+	        <result property="mainImage" column="main_image"/>
+	        <result property="productShortDescription" column="product_short_description"/>
+	    </association>
+	</resultMap>
+	
+	<resultMap id="productSearchMap" type="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct">
+	    <id  property="product_id" column="product_id"/>
+	
+	    <!-- Join된 상품 정보 -->
+	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
+	        <id property="productId" column="p_product_id"/>
+	        <result property="name" column="name"/>
+	        <result property="price" column="price"/>
+	        <result property="mainImage" column="main_image"/>
+	    </association>
+	</resultMap>
+	
+	<resultMap id="broadCastProductResultMap" type="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct">
+	    <result property="product_id" column="product_id"/>
+	
+	    <association property="product" javaType="org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO">
+	        <result property="name" column="name"/>
+	        <result property="price" column="price"/>
+	        <result property="mainImage" column="main_image"/>
+	    </association>
+	</resultMap>
+	
+	
+	<insert id="insert" parameterType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast"
+        useGeneratedKeys="true" keyProperty="broadcast_id">
+		INSERT INTO tb_live_broadcasts
+		(broadcaster_id, title, description, category_id, stream_url, thumbnail_url,
+		 is_public, broadcast_status, scheduled_start_time,
+		 scheduled_end_time, created_at, stream_key)
+		VALUES (
+			#{broadcaster_id}, 
+			#{title}, 
+			#{description}, 
+			#{category_id}, 
+			#{stream_url}, 
+			#{thumbnail_url},
+			#{is_public},
+			#{broadcast_status}, 
+			#{scheduled_start_time}, 
+			#{scheduled_end_time}, 
+			now(),
+			#{stream_key}
+		)
+	</insert>
+	
+	<insert id="insertProduct"  
+		parameterType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastProduct"
+        useGeneratedKeys="true" keyProperty="broadcast_product_id">
+		INSERT INTO tb_broadcast_products (broadcast_id, product_id)
+		VALUES (#{broadcast_id}, #{product_id})
+	</insert>
+	
+	<select id="selectByBroadcastId" resultMap="broadCastProductMap">
+    	SELECT 
+        bp.broadcast_id,
+        bp.product_id,
+
+        p.product_id AS p_product_id,
+        p.name,
+        p.price,
+        p.main_image,
+        p.product_short_description
+
+	    FROM tb_broadcast_products bp
+	    LEFT JOIN tb_product p ON bp.product_id = p.product_id
+	    WHERE bp.broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findByKeyword" resultMap="productSearchMap">
+        SELECT 
+        bp.product_id,
+        
+		p.product_id as p_product_id,
+        p.name,
+        p.price,
+        p.main_image
+
+	    FROM tb_broadcast_products bp
+	    RIGHT JOIN tb_product p ON bp.product_id = p.product_id
+	    WHERE p.name LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+    
+    <select id="findBroadcastById" resultType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast">
+	    SELECT
+	        broadcast_id,
+	        broadcaster_id,
+	        title,
+	        description,
+	        stream_url,
+	        total_viewers,
+	        like_count,
+	        scheduled_start_time,
+	        scheduled_end_time
+	    FROM tb_live_broadcasts
+	    WHERE broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findProductsByBroadcastId" resultMap="broadCastProductResultMap">
+	    SELECT
+	        bp.product_id,
+	        p.name,
+	        p.price,
+	        p.main_image
+	    FROM tb_broadcast_products bp
+	    JOIN tb_product p ON bp.product_id = p.product_id
+	    WHERE bp.broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findViewersByBroadcastId" resultType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCastViewer">
+	    SELECT
+	        user_id,
+	        username,
+	        joined_at,
+	        left_at,
+	        watch_duration
+	    FROM tb_live_broadcast_viewers
+	    WHERE broadcast_id = #{broadcast_id}
+	</select>
+	
+	<select id="findById" resultType="org.kosa.shoppingmaillmanager.host.broadcast.BroadCast">
+	    SELECT * FROM tb_live_broadcasts WHERE broadcast_id = #{broadcast_id}
+	</select>
+	
+	<update id="updateStatus">
+	    UPDATE tb_live_broadcasts
+	    SET broadcast_status = #{broadcast_status}
+	    WHERE broadcast_id = #{broadcast_id}
+	</update>
+	
+</mapper>

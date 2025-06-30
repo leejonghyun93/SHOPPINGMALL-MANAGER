@@ -23,6 +23,16 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' } // obs-websocket-client를 jitpack에서 제공
+}
+
+// ✅ Jetty 9으로 강제 고정
+configurations.all {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group.startsWith("org.eclipse.jetty")) {
+            details.useVersion "9.4.49.v20220914"
+        }
+    }
 }
 
 dependencies {
@@ -51,6 +61,20 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     
     implementation 'commons-io:commons-io:2.11.0'
+    
+    // 웹소켓
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    
+    // OBS Websocket 사용 
+    implementation 'io.obs-websocket.community:client:2.0.0' // OBS WebSocket 클라이언트
+    implementation 'com.google.code.gson:gson:2.10.1'        // JSON 직렬화/역직렬화용
+    
+    // OBS Websocket 2.0.0 버전에 맞게 jetty 9버전 사용
+    implementation 'org.eclipse.jetty:jetty-client:9.4.49.v20220914'
+    implementation 'org.eclipse.jetty:jetty-util:9.4.49.v20220914'
+    implementation 'org.eclipse.jetty:jetty-http:9.4.49.v20220914'
+    implementation 'org.eclipse.jetty.websocket:websocket-client:9.4.49.v20220914'
+
 }
 
 tasks.named('test') {

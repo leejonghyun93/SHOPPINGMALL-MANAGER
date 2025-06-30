@@ -22,5 +22,5 @@ public class OrderListDTO {
     private String user_name;           // 주문자 이름 (m.name)
     
     // Order_Item 테이블에서 불러올 정보
-    private List<OrderItem> orderItems;
+    private List<OrderItemDTO> orderItems;
 }

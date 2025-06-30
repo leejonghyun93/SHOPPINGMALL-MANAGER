@@ -6,6 +6,7 @@ import java.util.Map;
 import org.kosa.shoppingmaillmanager.security.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -103,6 +104,14 @@ public class UserController {
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("existUserId", userService.getUser(user.getUser_id()) != null);
 		return map;
+	}
+	
+	@GetMapping("/host/me")
+	public ResponseEntity<?> getMyInfo() {
+		String user_id = (String) SecurityContextHolder.getContext()
+							                .getAuthentication()
+							                .getPrincipal();
+		return ResponseEntity.ok(Map.of("user_id", user_id));
 	}
 	
 }

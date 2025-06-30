@@ -1,0 +1,19 @@
+package org.kosa.shoppingmaillmanager.host.broadcast;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+@Mapper
+public interface BroadCastDAO {
+	public int insert(BroadCast broadCast);
+	public List<BroadCastProduct> selectByBroadcastId(@Param("keyword") String keyword);
+	public int insertProduct(BroadCastProduct product);
+	public List<BroadCastProduct> findByKeyword(@Param("keyword") String keyword);
+	public BroadCast findBroadcastById(@Param("broadcast_id") int broadcast_id);
+    public List<BroadCastProduct> findProductsByBroadcastId(@Param("broadcast_id") int broadcastId);
+    public List<BroadCastViewer> findViewersByBroadcastId(@Param("broadcast_id") int broadcastId);
+	public BroadCast findById(int broadcast_id);
+	public void updateStatus(BroadCast broadCast);
+}

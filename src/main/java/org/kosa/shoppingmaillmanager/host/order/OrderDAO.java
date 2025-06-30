@@ -10,4 +10,10 @@ public interface OrderDAO {
 	public List<OrderListDTO> list(Map<String, Object> map);
 	public int getTotalCount(Map<String, Object> map);
 	public OrderDetailDTO getOrder(String order_id);
+	public int updateRecipient(OrderDetailDTO dto);
+	public int updateOrderStatusToCancelled(String order_id);
+	public void updateOrderStatusMutilCancelled(List<String> order_ids);
+	public List<String> getPagedOrderIds(Map<String, Object> map);
+	public List<OrderItemDTO> getOrderItemsByOrderId(String order_id);
+	public int updateOrderItemStatusToCancelled(String order_id);
 }
