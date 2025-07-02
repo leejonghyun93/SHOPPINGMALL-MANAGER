@@ -15,6 +15,8 @@ public class BroadCastService {
 
 	private final BroadCastDAO broadCastDAO;
 	
+	private final ViewerRedisService redisService;
+	
 	@Transactional
 	public BroadCastRegisterResult register(BroadCast broadCast) {
 		if (broadCast.getStream_key() == null || broadCast.getStream_key().isBlank()) {
@@ -53,22 +55,42 @@ public class BroadCastService {
 		return broadCastDAO.findById(broadcast_id);
 	}
 	
+	@Transactional(readOnly = true)
 	public BroadCast getBroadcastDetails(int broadcast_id) {
-        BroadCast broadcast = broadCastDAO.findBroadcastById(broadcast_id);
-        if (broadcast == null) {
-            throw new IllegalArgumentException("존재하지 않는 방송입니다.");
-        }
+	    BroadCast broadcast = broadCastDAO.findBroadcastById(broadcast_id);
+	    if (broadcast == null) {
+	        throw new IllegalArgumentException("존재하지 않는 방송입니다.");
+	    }
 
-        List<BroadCastProduct> products = broadCastDAO.findProductsByBroadcastId(broadcast_id);
-        List<BroadCastViewer> viewers = broadCastDAO.findViewersByBroadcastId(broadcast_id);
+	    List<BroadCastProduct> products = broadCastDAO.findProductsByBroadcastId(broadcast_id);
+	    List<BroadCastViewer> viewers = broadCastDAO.findViewersByBroadcastId(broadcast_id);
 
-        broadcast.setProductList(products);
-        broadcast.setViewerList(viewers);
+	    broadcast.setProductList(products);
+	    broadcast.setViewerList(viewers);
 
-        return broadcast;
-    }
+	    return broadcast;
+	}
 
 	public void updateStatus(BroadCast broadCast) {
 		broadCastDAO.updateStatus(broadCast);
+	}
+	
+	// 시청자 입장 메소드
+	public void onViewerJoined(int broadcastId, BroadCastViewer viewer) {
+	    broadCastDAO.insertViewer(viewer);
+	    redisService.increase(broadcastId);
+	}
+	
+	// 시청자 퇴장 메소드
+	public void onViewerLeft(int broadcast_id, String user_id) {
+	    broadCastDAO.updateLeftTime(user_id, broadcast_id);
+	    redisService.decrease(broadcast_id);
+	}
+	
+	// 방송 종료 메소드
+	public void onBroadcastEnd(int broadcast_id) {
+	    long total = redisService.getCount(broadcast_id);
+	    broadCastDAO.updateTotalViewersManual(broadcast_id, total);
+	    redisService.remove(broadcast_id); // 캐시 제거
 	}
 }

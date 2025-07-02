@@ -1,5 +1,7 @@
 package org.kosa.shoppingmaillmanager.obswebsocket;
 
+import io.obswebsocket.community.client.message.request.record.StartRecordRequest;
+import io.obswebsocket.community.client.message.request.record.StopRecordRequest;
 import io.obswebsocket.community.client.message.request.stream.StartStreamRequest;
 import io.obswebsocket.community.client.message.request.stream.StopStreamRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ public class OBSControlService {
     public void startStreaming() {
         // 연결 상태 확인
         if (obsWebSocketManager.isConnected()) {
+        	
             // 방송 시작 요청 객체를 생성해서 WebSocket으로 전송
             obsWebSocketManager.getController()
                     .sendRequest(
@@ -35,6 +38,12 @@ public class OBSControlService {
                             log.info("✅ 방송 시작 요청 응답: " + response);
                         }
                     );
+            
+            // 녹화 시작 요청 객체를 생성해서 WebSocket으로 전송
+            obsWebSocketManager.getController().sendRequest(
+                StartRecordRequest.builder().build(),
+                response -> log.info("🎥 녹화 시작 응답: {}", response)
+            );
         } else {
             // 연결되어 있지 않으면 예외 발생
             throw new IllegalStateException("OBS에 연결되어 있지 않습니다.");
@@ -56,6 +65,12 @@ public class OBSControlService {
                             log.info("✅ 방송 종료 요청 응답: " + response);
                         }
                     );
+            
+         // 녹화 종료 요청 객체를 생성해서 WebSocket으로 전송
+            obsWebSocketManager.getController().sendRequest(
+                StopRecordRequest.builder().build(),
+                response -> log.info("🎥 녹화 종료 응답: {}", response)
+            );
         } else {
             // 연결되어 있지 않으면 예외 발생
             throw new IllegalStateException("OBS에 연결되어 있지 않습니다.");

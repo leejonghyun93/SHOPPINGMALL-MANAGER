@@ -30,11 +30,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
+
 private final JwtUtil jwtUtil;
 
 public JwtFilter(JwtUtil jwtUtil) {
 this.jwtUtil = jwtUtil;
 }
+
     /**
      * Spring Security의 필터 체인에서 매 요청마다 실행되는 메서드
      * JWT가 유효하면 사용자 인증 처리를 수행
@@ -85,7 +87,9 @@ this.jwtUtil = jwtUtil;
                 return;
             }
         } else {
+
          System.out.println("⚠️ Authorization 헤더 없음 또는 Bearer 형식 아님");
+
         }
 
         // 다음 필터로 요청 전달

@@ -41,6 +41,8 @@ public class BroadCastController {
 	private final BroadCastService broadCastService;
 	private final OBSControlService obsControlService;
 	
+	private final ViewerRedisService redisService;
+	
 	 // 실제 서버에 썸네일을 저장할 디렉터리 (로컬 경로)
     private static final String UPLOAD_DIR = "C:/upload/";
 	
@@ -76,8 +78,8 @@ public class BroadCastController {
 	        String stream_key = saved.getStream_key();  // 생성된 방송 키 (고유값)
 
 	        // RTMP / HLS URL 생성
-	        String rtmpUrl = "rtmp://localhost/stream/"; // 방송 입력 주소 (OBS용)
-	        String hlsUrl = "http://localhost:8090/live/" + stream_key + "_720p2628kbs/index.m3u8"; // 시청 URL
+	        String rtmpUrl = "rtmp://192.168.4.206/stream/"; // 방송 입력 주소 (OBS용)
+	        String hlsUrl = "http://192.168.4.206:8090/live/" + stream_key + "_720p2628kbs/index.m3u8"; // 시청 URL
 	        saved.setStream_url(hlsUrl); // 방송 객체에 스트림 URL 저장
 
 	        // 클라이언트에게 응답으로 전달할 데이터 구성
@@ -158,8 +160,8 @@ public class BroadCastController {
     @GetMapping("/init")
     public ResponseEntity<Map<String, Object>> initBroadcastInfo() {
         String streamKey = UUID.randomUUID().toString();
-        String rtmpUrl = "rtmp://localhost/stream/";
-        String hlsUrl = "http://localhost:8090/live/" + streamKey + "_720p2628kbs/index.m3u8";
+        String rtmpUrl = "rtmp://192.168.4.206/stream/";
+        String hlsUrl = "http://192.168.4.206:8090/live/" + streamKey + "_720p2628kbs/index.m3u8";
 
         Map<String, Object> result = new HashMap<>();
         result.put("stream_key", streamKey);
@@ -300,6 +302,12 @@ public class BroadCastController {
                     "message", e.getMessage()
             ));
         }
+    }
+    
+    @GetMapping("/{broadcast_id}/viewer-count")
+    public ResponseEntity<Long> getViewerCount(@PathVariable int broadcast_id) {
+    	long count = redisService.getCount(broadcast_id);
+        return ResponseEntity.ok(count);
     }
     
 }
