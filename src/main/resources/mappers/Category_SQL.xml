@@ -3,10 +3,11 @@
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
+<!-- CategoryMapper.xml -->
 <mapper namespace="org.kosa.shoppingmaillmanager.host.product.category.CategoryDAO">
 
-  <!-- 모든 카테고리 flat list 조회 -->
-  <select id="selectCategoryTree" resultType="org.kosa.shoppingmaillmanager.host.product.category.CategoryTreeDTO">
+  <!-- 전체 카테고리 (flat list) -->
+  <select id="selectCategoryTree" resultType="org.kosa.shoppingmaillmanager.host.product.dto.CategoryTreeDTO">
     SELECT
       category_id AS categoryId,
       name AS categoryName,
@@ -15,16 +16,18 @@
     FROM tb_category
     ORDER BY category_display_order
   </select>
-  
-  <select id="selectMainCategories" resultType="org.kosa.shoppingmaillmanager.host.product.category.CategoryTreeDTO">
-  SELECT
-    category_id AS categoryId,
-    name AS categoryName,
-    category_level AS categoryLevel,
-    parent_category_id AS parentCategoryId
-  FROM tb_category
-  WHERE category_level = 1
-  ORDER BY category_display_order
-</select>
+
+  <!-- 대분류만 (레벨 1) -->
+  <select id="selectMainCategories" resultType="org.kosa.shoppingmaillmanager.host.product.dto.CategoryTreeDTO">
+    SELECT
+      category_id AS categoryId,
+      name AS categoryName,
+      category_level AS categoryLevel,
+      parent_category_id AS parentCategoryId
+    FROM tb_category
+    WHERE category_level = 1
+    ORDER BY category_display_order
+  </select>
 
 </mapper>
+

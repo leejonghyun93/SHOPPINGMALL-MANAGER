@@ -25,20 +25,17 @@ public class SecurityConfig {
     }
     
     @SuppressWarnings("removal")
-	@Bean
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-        	.cors()  // 👈 CORS 허용 추가
-            .and()
-            .csrf().disable()
-            .authorizeHttpRequests()
-            	.requestMatchers("/api/broadcast/start").authenticated()
-                .requestMatchers("/**").permitAll()
-                .and()
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);  // ✅ 필터 체인에 JWT 추가
-//                .anyRequest().authenticated();
-
-        return http.build();
+        return http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/broadcast/start", "/members/me", "/products", "/products/**").authenticated()
+                .anyRequest().permitAll()
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
 
     // 👇 CORS 설정 Bean 따로 등록
@@ -54,4 +51,5 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+    
 }

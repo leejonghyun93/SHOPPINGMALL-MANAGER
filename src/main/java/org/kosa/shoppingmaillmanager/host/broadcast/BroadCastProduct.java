@@ -1,6 +1,6 @@
 package org.kosa.shoppingmaillmanager.host.broadcast;
 
-import org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductSimpleDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,5 +21,5 @@ public class BroadCastProduct {
 	private String created_at;              // 생성일시
 	private String updated_at;              // 수정일시
 	
-	private ProductDTO product;
+	private ProductSimpleDTO product;
 }

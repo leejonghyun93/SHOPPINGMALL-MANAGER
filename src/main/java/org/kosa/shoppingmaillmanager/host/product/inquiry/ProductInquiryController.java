@@ -2,26 +2,37 @@ package org.kosa.shoppingmaillmanager.host.product.inquiry;
 
 import java.util.List;
 
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryAnswerDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryDetailDTO;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/products/{productId}/inquiries")
+@RequiredArgsConstructor
 public class ProductInquiryController {
 
     private final ProductInquiryService productInquiryService;
-    private final ProductInquiryAnswerService answerService;
-
-    public ProductInquiryController(ProductInquiryService productInquiryService,
-                                    ProductInquiryAnswerService answerService) {
-        this.productInquiryService = productInquiryService;
-        this.answerService = answerService;
-    }
 
     // 1. 상품별 문의 목록
     @GetMapping
-    public ResponseEntity<List<ProductInquiryDTO>> getInquiriesByProductId(@PathVariable int productId) {
-        List<ProductInquiryDTO> inquiries = productInquiryService.getInquiriesByProductId(productId);
+    public ResponseEntity<List<ProductInquiryDTO>> getInquiriesByProductId(
+            @PathVariable int productId,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        List<ProductInquiryDTO> inquiries = productInquiryService.getInquiriesByProductId(userId, productId);
         return ResponseEntity.ok(inquiries);
     }
 
@@ -29,8 +40,11 @@ public class ProductInquiryController {
     @GetMapping("/{qnaId}")
     public ResponseEntity<ProductInquiryDetailDTO> getInquiryDetail(
             @PathVariable int productId,
-            @PathVariable String qnaId) {
-        ProductInquiryDetailDTO detail = productInquiryService.getInquiryDetailWithAnswers(productId, qnaId);
+            @PathVariable String qnaId,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        ProductInquiryDetailDTO detail = productInquiryService.getInquiryDetailWithAnswers(userId, productId, qnaId);
         if (detail == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(detail);
     }
@@ -40,8 +54,11 @@ public class ProductInquiryController {
     public ResponseEntity<Void> createAnswer(
             @PathVariable int productId,
             @PathVariable String qnaId,
-            @RequestBody ProductInquiryAnswerDTO answerDTO) {
-        answerService.createAnswer(qnaId, answerDTO);
+            @RequestBody ProductInquiryAnswerDTO answerDTO,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        productInquiryService.createAnswer(userId, productId, qnaId, answerDTO);
         return ResponseEntity.ok().build();
     }
 
@@ -51,8 +68,11 @@ public class ProductInquiryController {
             @PathVariable int productId,
             @PathVariable String qnaId,
             @PathVariable String answerId,
-            @RequestBody ProductInquiryAnswerDTO answerDTO) {
-        answerService.updateAnswer(qnaId, answerId, answerDTO);
+            @RequestBody ProductInquiryAnswerDTO answerDTO,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        productInquiryService.updateAnswer(userId, productId, qnaId, answerId, answerDTO);
         return ResponseEntity.ok().build();
     }
 
@@ -61,8 +81,11 @@ public class ProductInquiryController {
     public ResponseEntity<Void> deleteAnswer(
             @PathVariable int productId,
             @PathVariable String qnaId,
-            @PathVariable String answerId) {
-        answerService.deleteAnswer(qnaId, answerId);
+            @PathVariable String answerId,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        productInquiryService.deleteAnswer(userId, productId, qnaId, answerId);
         return ResponseEntity.ok().build();
     }
 }
