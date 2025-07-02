@@ -1,59 +1,108 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <!DOCTYPE mapper 
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDAO">
+<mapper
+	namespace="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDAO">
 
-  <!-- 1. 상품별 문의 목록 -->
-  <select id="selectInquiriesByProductId" parameterType="int" resultType="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDTO">
-    SELECT
-      q.QNA_ID as qnaId,
-      q.PRODUCT_ID as productId,
-      p.NAME as productName,
-      q.USER_ID as userId,
-      q.TITLE as title,
-      q.CONTENT as content,
-      q.QNA_STATUS as qnaStatus,
-      q.IS_SECRET as isSecret,
-      q.VIEW_COUNT as viewCount,
-      q.ANSWER_DATE as answerDate,
-      q.ANSWER_USER_ID as answerUserId,
-      q.CREATED_DATE as createdDate,
-      q.UPDATED_DATE as updatedDate
-    FROM tb_product_qna q
-    JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
-    WHERE q.PRODUCT_ID = #{productId}
-    ORDER BY q.CREATED_DATE DESC
-  </select>
+	<!-- 1. 상품별 문의 목록 (호스트 검증 포함) -->
+	<select id="selectInquiriesByProductId" parameterType="map"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryDTO">
+		SELECT
+		q.QNA_ID as qnaId,
+		q.PRODUCT_ID as productId,
+		p.NAME as productName,
+		q.USER_ID as userId,
+		q.TITLE as title,
+		q.CONTENT as content,
+		q.QNA_STATUS as qnaStatus,
+		q.IS_SECRET as isSecret,
+		q.VIEW_COUNT as viewCount,
+		q.ANSWER_DATE as answerDate,
+		q.ANSWER_USER_ID as answerUserId,
+		q.CREATED_DATE as createdDate,
+		q.UPDATED_DATE as updatedDate
+		FROM tb_product_qna q
+		JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
+		WHERE q.PRODUCT_ID = #{productId}
+		AND p.HOST_ID = #{hostId}
+		ORDER BY q.CREATED_DATE DESC
+	</select>
 
-  <!-- 2. 문의 상세(상품명 포함) -->
-  <select id="selectInquiryDetail" parameterType="map" resultType="org.kosa.shoppingmaillmanager.host.product.inquiry.ProductInquiryDetailDTO">
-    SELECT
-      q.QNA_ID as qnaId,
-      q.PRODUCT_ID as productId,
-      p.NAME as productName,
-      q.USER_ID as userId,
-      q.TITLE as title,
-      q.CONTENT as content,
-      q.QNA_STATUS as qnaStatus,
-      q.IS_SECRET as isSecret,
-      q.VIEW_COUNT as viewCount,
-      q.ANSWER_USER_ID as answerUserId,
-      q.CREATED_DATE as createdDate,
-      q.UPDATED_DATE as updatedDate
-    FROM tb_product_qna q
-    JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
-    WHERE q.PRODUCT_ID = #{productId}
-      AND q.QNA_ID = #{qnaId}
-  </select>
+	<!-- 2. 문의 상세 (호스트 검증 포함) -->
+	<select id="selectInquiryDetail" parameterType="map"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryDetailDTO">
+		SELECT
+		q.QNA_ID as qnaId,
+		q.PRODUCT_ID as productId,
+		p.NAME as productName,
+		q.USER_ID as userId,
+		q.TITLE as title,
+		q.CONTENT as content,
+		q.QNA_STATUS as qnaStatus,
+		q.IS_SECRET as isSecret,
+		q.VIEW_COUNT as viewCount,
+		q.ANSWER_USER_ID as answerUserId,
+		q.CREATED_DATE as createdDate,
+		q.UPDATED_DATE as updatedDate
+		FROM tb_product_qna q
+		JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
+		WHERE q.PRODUCT_ID = #{productId}
+		AND q.QNA_ID = #{qnaId}
+		AND p.HOST_ID = #{hostId}
+	</select>
 
-  <!-- 3. 문의 상태(QNA_STATUS) 변경 -->
-  <update id="updateQnaStatus" parameterType="map">
-    UPDATE tb_product_qna
-    SET QNA_STATUS = #{qnaStatus}
-    WHERE QNA_ID = #{qnaId}
-  </update>
+	<!-- 3. 문의 상태(QNA_STATUS) 변경 -->
+	<update id="updateQnaStatus" parameterType="map">
+		UPDATE tb_product_qna
+		SET QNA_STATUS = #{qnaStatus}
+		WHERE QNA_ID = #{qnaId}
+	</update>
+
+	<!-- 4. 상품 ID로 host_id 조회 (판매자 검증용) -->
+	<select id="selectHostIdByProductId" parameterType="int"
+		resultType="string">
+		SELECT host_id
+		FROM tb_product
+		WHERE product_id = #{productId}
+	</select>
+
+	<!-- 5. 특정 문의(QNA_ID)의 답변 리스트 -->
+	<select id="selectAnswersByQnaId" parameterType="string"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryAnswerDTO">
+		SELECT
+		ANSWER_ID as answerId,
+		QNA_ID as qnaId,
+		USER_ID as userId,
+		CONTENT as content,
+		CREATED_DATE as createdDate,
+		UPDATED_DATE as updatedDate
+		FROM tb_product_qna_answer
+		WHERE QNA_ID = #{qnaId}
+		ORDER BY CREATED_DATE ASC
+	</select>
+
+	<!-- 6. 답변 등록 -->
+	<insert id="insertAnswer" parameterType="map">
+		INSERT INTO tb_product_qna_answer
+		(QNA_ID, USER_ID, CONTENT, CREATED_DATE, UPDATED_DATE)
+		VALUES
+		(#{qnaId}, #{answer.userId}, #{answer.content}, NOW(), NOW())
+	</insert>
+
+	<!-- 7. 답변 수정 -->
+	<update id="updateAnswer" parameterType="map">
+		UPDATE tb_product_qna_answer
+		SET CONTENT = #{answer.content},
+		UPDATED_DATE = NOW()
+		WHERE ANSWER_ID = #{answerId}
+	</update>
+
+	<!-- 8. 답변 삭제 -->
+	<delete id="deleteAnswer" parameterType="string">
+		DELETE FROM tb_product_qna_answer
+		WHERE ANSWER_ID = #{answerId}
+	</delete>
 
 </mapper>

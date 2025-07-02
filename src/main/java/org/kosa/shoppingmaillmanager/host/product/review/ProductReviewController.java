@@ -1,35 +1,62 @@
 package org.kosa.shoppingmaillmanager.host.product.review;
 
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import java.util.List;
+
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDetailDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDisplayDTO;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/products/{productId}/reviews")
 @RequiredArgsConstructor
 public class ProductReviewController {
 
-    private final ProductReviewService reviewService;
+    private final ProductReviewService productReviewService;
 
-    @GetMapping
-    public List<ProductReviewDTO> getReviews(@PathVariable String productId) {
-        return reviewService.getReviewsByProductId(productId);
-    }
-
+    // 1. 후기 상세 조회 (판매자는 공개 여부와 관계없이 조회 가능)
     @GetMapping("/{reviewId}")
-    public ProductReviewDTO getReview(@PathVariable String productId, @PathVariable String reviewId) {
-        // 필요 시 productId와 reviewId 일치 여부 검증 가능
-        return reviewService.getReviewById(reviewId);
+    public ResponseEntity<ProductReviewDetailDTO> getReviewDetail(
+            @PathVariable int productId,
+            @PathVariable String reviewId,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        ProductReviewDetailDTO detail = productReviewService.getReviewDetail(userId, productId, reviewId);
+        if (detail == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(detail);
     }
 
-    @PatchMapping("/{reviewId}")
-    public ResponseEntity<Void> updateReviewDisplayYn(
-        @PathVariable String productId,
-        @PathVariable String reviewId,
-        @RequestBody ProductReviewDTO dto) {
-        reviewService.updateReviewDisplayYn(reviewId, dto.getDisplayYn());
-        return ResponseEntity.noContent().build();
+    // 2. 공개 여부 변경 (displayYn)
+    @PutMapping("/{reviewId}/display-yn")
+    public ResponseEntity<Void> updateDisplayYn(
+            @PathVariable int productId,
+            @PathVariable String reviewId,
+            @RequestBody ProductReviewDisplayDTO dto,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        productReviewService.updateDisplayYn(userId, productId, reviewId, dto.getDisplayYn());
+        return ResponseEntity.ok().build();
+    }
+
+    // 3. 후기 목록 조회 (판매자는 공개/비공개 모두 조회 가능)
+    @GetMapping
+    public ResponseEntity<List<ProductReviewDTO>> getReviewList(
+            @PathVariable int productId,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        List<ProductReviewDTO> reviews = productReviewService.getReviewList(userId, productId);
+        return ResponseEntity.ok(reviews);
     }
 }

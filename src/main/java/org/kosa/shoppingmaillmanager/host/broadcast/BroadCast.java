@@ -2,7 +2,7 @@ package org.kosa.shoppingmaillmanager.host.broadcast;
 
 import java.util.List;
 
-import org.kosa.shoppingmaillmanager.host.product.category.CategoryTreeDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.CategoryTreeDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

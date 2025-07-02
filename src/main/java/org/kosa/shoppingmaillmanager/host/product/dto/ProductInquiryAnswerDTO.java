@@ -1,13 +1,13 @@
-package org.kosa.shoppingmaillmanager.host.product.inquiry;
+package org.kosa.shoppingmaillmanager.host.product.dto;
 
-import java.time.LocalDateTime;
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Data
 public class ProductInquiryAnswerDTO {
     private String answerId;
     private String qnaId;
-    private String userId;
+    private String userId; // 답변 작성자
     private String content;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;

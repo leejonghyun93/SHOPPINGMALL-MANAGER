@@ -1,23 +1,22 @@
 package org.kosa.shoppingmaillmanager.host.product;
 
-import java.io.File;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.*;
-import org.kosa.shoppingmaillmanager.host.product.category.CategoryDAO;
-import org.kosa.shoppingmaillmanager.host.product.category.CategoryTreeDTO;
-import org.kosa.shoppingmaillmanager.host.product.dto.OptionDTO;
-import org.kosa.shoppingmaillmanager.host.product.dto.ProductCreateRequest;
-import org.kosa.shoppingmaillmanager.host.product.dto.ProductDTO;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductOptionDto;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductRequestDto;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductSearchCondition;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductSimpleDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductUpdateDto;
 import org.kosa.shoppingmaillmanager.host.product.entity.Product;
 import org.kosa.shoppingmaillmanager.host.product.entity.ProductOption;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityNotFoundException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,173 +25,166 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ProductService {
 
-    private final ProductRepository productRepository;
-    private final ProductOptionRepository productOptionRepository;
-    private final ProductDAO productDAO;
-    private final CategoryDAO categoryDAO;
+	private final ProductDAO productDAO;
+	private final HostDAO hostDAO;
+	private final FileStorageService fileStorageService;
 
-    private static final String MAIN_IMAGE_UPLOAD_DIR = "C:/upload/product/main/";
+	public ProductListResponse getProductList(String userId, ProductSearchCondition cond) {
+		String hostId = hostDAO.findHostIdByUserId(userId);
+		if (hostId == null) {
+			throw new IllegalArgumentException("해당 유저의 호스트 ID를 찾을 수 없습니다.");
+		}
 
-    private List<CategoryTreeDTO> cachedCategoryTree;
+		Map<String, Object> paramMap = new HashMap<>();
+		paramMap.put("hostId", hostId);
+		paramMap.put("status", cond.getStatus());
+		paramMap.put("categoryId", cond.getCategoryId());
+		paramMap.put("keyword", cond.getKeyword());
+		paramMap.put("offset", (cond.getPage() - 1) * cond.getSize());
+		paramMap.put("limit", cond.getSize());
+		paramMap.put("sort", cond.getSort());
 
-    private List<CategoryTreeDTO> getCategoryTreeCached() {
-        if (cachedCategoryTree == null) {
-            cachedCategoryTree = categoryDAO.selectCategoryTree();
+		List<ProductSimpleDTO> content = productDAO.selectProductList(paramMap);
+		long total = productDAO.countProductList(paramMap);
+
+		Map<String, Long> statusCounts = new HashMap<>();
+		long totalCount = 0;
+		List<Map<String, Object>> rawCounts = productDAO.countProductStatusMapRaw(hostId);
+		for (Map<String, Object> row : rawCounts) {
+			String status = (String) row.get("status");
+			Long count = ((Number) row.get("cnt")).longValue();
+			statusCounts.put(status, count);
+			totalCount += count;
+		}
+		statusCounts.put("전체", totalCount);
+
+		return new ProductListResponse(content, total, statusCounts);
+	}
+
+	// ✅ 진열여부 변경 - host 체크 포함
+	public void updateDisplayYn(String userId, Integer productId, String displayYn) {
+		String hostId = hostDAO.findHostIdByUserId(userId);
+		if (hostId == null) {
+			throw new IllegalArgumentException("호스트 정보를 찾을 수 없습니다.");
+		}
+		// 소유권 검증 (추가적으로 selectProductById로 조회할 수도 있음)
+		ProductSimpleDTO dto = productDAO.selectProductById(hostId, productId);
+		if (dto == null) {
+			throw new NoSuchElementException("본인의 상품이 아니거나 존재하지 않습니다.");
+		}
+		productDAO.updateDisplayYn(productId, displayYn);
+	}
+
+	public ProductSimpleDTO getProductDetail(String userId, Integer productId) {
+		String hostId = hostDAO.findHostIdByUserId(userId);
+		ProductSimpleDTO dto = productDAO.selectProductById(hostId, productId);
+		if (dto == null) {
+			throw new NoSuchElementException("상품을 찾을 수 없습니다.");
+		}
+		
+		List<ProductOptionDto> options = productDAO.findOptionsByProductId(productId);
+	    dto.setOptions(options);
+		
+		return dto;
+	}
+
+	public void updateProductField(String userId, Integer productId, Map<String, Object> updates) {
+		String hostId = hostDAO.findHostIdByUserId(userId);
+		ProductSimpleDTO dto = productDAO.selectProductById(hostId, productId);
+		if (dto == null) {
+			throw new NoSuchElementException("본인의 상품이 아니거나 존재하지 않습니다.");
+		}
+		productDAO.updateProductField(hostId, productId, updates);
+	}
+	
+	@Transactional
+    public void registerProduct(String userId, ProductRequestDto dto, MultipartFile mainImage) throws IOException {
+        // ✅ 1. userId → hostId 조회 및 검증
+        String hostId = hostDAO.findHostIdByUserId(userId);
+        if (hostId == null) {
+            throw new IllegalArgumentException("호스트 정보가 존재하지 않습니다.");
         }
-        return cachedCategoryTree;
-    }
 
-    public ProductListResponse getAllProducts(int page, int size, String status, Integer categoryId, String keyword) {
-        List<CategoryTreeDTO> allCategories = getCategoryTreeCached();
+        
+		// ✅ 2. 대표 이미지 저장
+        String imagePath = fileStorageService.store(mainImage);
 
-        int offset = Math.max(0, (page - 1) * size);
-        Map<String, Object> params = new HashMap<>();
-        params.put("offset", offset);
-        params.put("limit", size);
+        // ✅ 3. 상품 등록
+        Product product = Product.builder()
+                .hostId(hostId)
+                .categoryId(dto.getCategoryId())
+                .name(dto.getName())
+                .price(dto.getPrice())
+                .salePrice(dto.getSalePrice())
+                .stock(dto.getStock())
+                .productStatus(dto.getProductStatus())
+                .productShortDescription(dto.getProductShortDescription())
+                .productDescription(dto.getProductDescription())
+                .mainImage(imagePath)
+                .build();
+        productDAO.insertProduct(product);
 
-        if (categoryId != null) {
-            params.put("categoryIds", findAllDescendantCategoryIds(categoryId, allCategories));
-        }
-        if (status != null && !status.isEmpty() && !"ALL".equals(status)) {
-            params.put("status", status);
-        }
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            params.put("keyword", keyword.trim());
-        }
-
-        List<ProductDTO> content = productDAO.selectProductListWithCategory(params);
-
-        params.remove("offset");
-        params.remove("limit");
-        int totalElements = productDAO.selectProductListWithCategory(params).size();
-
-        Map<String, Long> statusCounts = getProductStatusCounts();
-
-        return new ProductListResponse(content, totalElements, statusCounts);
-    }
-
-    private List<Integer> findAllDescendantCategoryIds(Integer rootId, List<CategoryTreeDTO> allCategories) {
-        Set<Integer> result = new HashSet<>();
-        findDescendants(rootId, allCategories, result);
-        return new ArrayList<>(result);
-    }
-
-    private void findDescendants(Integer parentId, List<CategoryTreeDTO> allCategories, Set<Integer> result) {
-        result.add(parentId);
-        for (CategoryTreeDTO cat : allCategories) {
-            if (parentId.equals(cat.getParentCategoryId())) {
-                findDescendants(cat.getCategoryId(), allCategories, result);
+        // ✅ 4. 옵션 등록
+        if (dto.getOptions() != null && !dto.getOptions().isEmpty()) {
+            for (ProductOptionDto optionDto : dto.getOptions()) {
+                ProductOption option = ProductOption.builder()
+                        .productId(product.getProductId())
+                        .optionName(optionDto.getOptionName())
+                        .salePrice(optionDto.getSalePrice())
+                        .stock(optionDto.getStock())
+                        .status(optionDto.getStatus())
+                        .build();
+                productDAO.insertProductOption(option);
             }
         }
     }
+	
+	@Transactional
+	public void updateProduct(String userId, Integer productId, ProductUpdateDto dto) throws IOException {
+	    // 1. userId → hostId 조회
+	    String hostId = hostDAO.findHostIdByUserId(userId);
+	    if (hostId == null) throw new IllegalArgumentException("호스트 정보가 없습니다.");
 
-    public Map<String, Long> getProductStatusCounts() {
-        Map<String, Long> counts = new HashMap<>();
-        counts.put("ALL", productRepository.count());
-        counts.put("ACTIVE", productRepository.countByProductStatus("ACTIVE"));
-        counts.put("INACTIVE", productRepository.countByProductStatus("INACTIVE"));
-        counts.put("SOLD_OUT", productRepository.countByProductStatus("SOLD_OUT"));
-        return counts;
-    }
+	    // 2. 상품 존재 여부 확인
+	    Product existing = productDAO.findProductById(productId);
+	    if (existing == null) throw new IllegalArgumentException("상품이 존재하지 않습니다.");
+	    if (!existing.getHostId().equals(hostId)) throw new SecurityException("수정 권한이 없습니다.");
 
-    @Transactional
-    public void updateDisplayYn(Integer productId, String displayYn) {
-        int updated = productRepository.updateDisplayYn(productId, displayYn);
-        if (updated == 0) {
-            throw new IllegalArgumentException("상품을 찾을 수 없습니다: " + productId);
-        }
-    }
+	    // 3. 대표 이미지 교체 시 저장
+	    String imagePath = existing.getMainImage();
+	    if (dto.getMainImage() != null && !dto.getMainImage().isEmpty()) {
+	        imagePath = fileStorageService.store(dto.getMainImage());
+	    }
 
-    public ProductDTO getProductById(Integer productId) {
-        Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. productId=" + productId));
+	    // 4. 상품 업데이트
+	    Product updated = Product.builder()
+	            .productId(productId)
+	            .hostId(hostId)
+	            .categoryId(dto.getCategoryId())
+	            .name(dto.getName())
+	            .price(dto.getPrice())
+	            .salePrice(dto.getSalePrice())
+	            .stock(dto.getStock())
+	            .productStatus(dto.getProductStatus())
+	            .productShortDescription(dto.getProductShortDescription())
+	            .productDescription(dto.getProductDescription())
+	            .mainImage(imagePath)
+	            .build();
+	    productDAO.updateProduct(updated);
 
-        ProductDTO dto = ProductDTO.fromEntity(product);
-        List<CategoryTreeDTO> allCategories = getCategoryTreeCached();
-
-        if (product.getCategoryId() != null) {
-            try {
-                String[] names = CategoryTreeDTO.getCategoryNames(product.getCategoryId(), allCategories);
-                dto.setMainCategoryName(names[0]);
-                dto.setMidCategoryName(names[1]);
-                dto.setSubCategoryName(names[2]);
-            } catch (Exception e) {
-                // 카테고리명 예외 무시
-            }
-        }
-        dto.setDisplayYn(product.getDisplayYn());
-        return dto;
-    }
-
-    @Transactional
-    public void updateProductField(Integer productId, Map<String, Object> updates) {
-        Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. productId=" + productId));
-
-        updates.forEach((k, v) -> {
-            switch (k) {
-                case "stock" -> product.setStock((Integer) v);
-                case "salePrice" -> product.setSalePrice((Integer) v);
-                case "status" -> product.setProductStatus((String) v);
-                // 추가 필드 필요시 확장
-            }
-        });
-
-        productRepository.save(product);
-    }
-
-    @Transactional
-    public void createProduct(ProductCreateRequest req) {
-
-        String mainImageUrl = null;
-        MultipartFile mainImage = req.getMainImage();
-
-        if (mainImage != null && !mainImage.isEmpty()) {
-            String ext = StringUtils.getFilenameExtension(mainImage.getOriginalFilename());
-            String uuidFileName = UUID.randomUUID() + (ext != null ? "." + ext : "");
-            File dest = new File(MAIN_IMAGE_UPLOAD_DIR, uuidFileName);
-
-            try {
-                mainImage.transferTo(dest);
-                mainImageUrl = "/upload/product/main/" + uuidFileName;
-            } catch (IOException e) {
-                throw new RuntimeException("대표이미지 파일 저장 실패", e);
-            }
-        }
-
-        Product product = new Product();
-        product.setHostId(1L);
-        product.setCategoryId(req.getCategoryId());
-        product.setName(req.getName());
-        product.setPrice(req.getPrice());
-        product.setSalePrice(req.getSalePrice());
-        product.setProductShortDescription(req.getProductShortDescription());
-        product.setProductDescription(req.getProductDescription()); // HTML 그대로 저장
-        product.setStock(req.getStock());
-        product.setProductStatus(req.getProductStatus());
-        product.setCreatedDate(LocalDateTime.now());
-        product.setMainImage(mainImageUrl);
-        product.setDisplayYn("Y");
-
-        productRepository.save(product);
-
-        // 옵션 저장
-        if (req.getOptions() != null && !req.getOptions().isEmpty()) {
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                List<OptionDTO> options = mapper.readValue(req.getOptions(), new TypeReference<>() {});
-                for (OptionDTO opt : options) {
-                    ProductOption option = new ProductOption();
-                    option.setProductId(product.getProductId());
-                    option.setOptionName(opt.getOptionName());
-                    option.setSalePrice(opt.getSalePrice());
-                    option.setStock(opt.getStock());
-                    option.setStatus(opt.getStatus());
-                    productOptionRepository.save(option);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("옵션 파싱/저장 실패", e);
-            }
-        }
-    }
+	    // 5. 옵션 전체 삭제 후 재등록
+	    productDAO.deleteProductOptionsByProductId(productId);
+	    if (dto.getOptions() != null && !dto.getOptions().isEmpty()) {
+	        for (ProductOptionDto optionDto : dto.getOptions()) {
+	            ProductOption option = ProductOption.builder()
+	                    .productId(productId)
+	                    .optionName(optionDto.getOptionName())
+	                    .salePrice(optionDto.getSalePrice())
+	                    .stock(optionDto.getStock())
+	                    .status(optionDto.getStatus())
+	                    .build();
+	            productDAO.insertProductOption(option);
+	        }
+	    }
+	}
 }

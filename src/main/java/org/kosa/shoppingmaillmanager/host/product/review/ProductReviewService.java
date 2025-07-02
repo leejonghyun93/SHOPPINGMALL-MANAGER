@@ -1,35 +1,56 @@
 package org.kosa.shoppingmaillmanager.host.product.review;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.kosa.shoppingmaillmanager.host.product.HostDAO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDetailDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityNotFoundException;
-
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductReviewService {
 
-    private final ProductReviewDAO reviewDAO;
+    private final ProductReviewDAO productReviewDAO;
+    private final ProductReviewImageDAO productReviewImageDAO;
+    private final HostDAO hostDAO;
 
-    // 상품코드별 후기 전체(공개/비공개 모두), 최신순
-    public List<ProductReviewDTO> getReviewsByProductId(String productId) {
-        return reviewDAO.selectReviewsWithProductNameByProductId(productId);
+    // 후기 상세 조회
+    public ProductReviewDetailDTO getReviewDetail(String userId, int productId, String reviewId) {
+        validateHostOwnership(userId, productId);
+        ProductReviewDetailDTO detail = productReviewDAO.selectReviewDetailById(reviewId);
+        if (detail != null) {
+            List<String> imageUrls = productReviewImageDAO.selectImageUrlsByReviewId(reviewId);
+            detail.setImageUrls(imageUrls);
+        }
+        return detail;
     }
 
-    // 단일 후기 상세
-    public ProductReviewDTO getReviewById(String reviewId) {
-        return reviewDAO.selectReviewById(reviewId);
-    }
-
+    // 공개 여부 수정
     @Transactional
-    public void updateReviewDisplayYn(String reviewId, String displayYn) {
-        int updated = reviewDAO.updateReviewDisplayYn(reviewId, displayYn);
+    public void updateDisplayYn(String userId, int productId, String reviewId, String displayYn) {
+        validateHostOwnership(userId, productId);
+        int updated = productReviewDAO.updateReviewDisplayYn(reviewId, displayYn);
         if (updated == 0) {
-            throw new EntityNotFoundException("후기를 찾을 수 없습니다. reviewId=" + reviewId);
+            throw new EntityNotFoundException("해당 후기를 찾을 수 없습니다. reviewId=" + reviewId);
+        }
+    }
+
+    // 후기 목록 조회
+    public List<ProductReviewDTO> getReviewList(String userId, int productId) {
+        validateHostOwnership(userId, productId);
+        return productReviewDAO.selectReviewsWithProductNameByProductId(productId);
+    }
+
+    // 판매자 권한 확인
+    private void validateHostOwnership(String userId, int productId) {
+        String hostId = hostDAO.findHostIdByUserId(userId);
+        String productHostId = productReviewDAO.selectHostIdByProductId(productId);
+        if (hostId == null || !hostId.equals(productHostId)) {
+            throw new SecurityException("해당 상품에 대한 접근 권한이 없습니다.");
         }
     }
 }
