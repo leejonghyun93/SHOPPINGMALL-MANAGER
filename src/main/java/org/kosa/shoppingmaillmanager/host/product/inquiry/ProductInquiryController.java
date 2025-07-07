@@ -13,20 +13,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/products/{productId}/inquiries")
+@RequestMapping
 @RequiredArgsConstructor
 public class ProductInquiryController {
 
     private final ProductInquiryService productInquiryService;
 
     // 1. 상품별 문의 목록
-    @GetMapping
+    @GetMapping("/products/{productId}/inquiries")
     public ResponseEntity<List<ProductInquiryDTO>> getInquiriesByProductId(
             @PathVariable int productId,
             HttpServletRequest request) {
@@ -37,7 +38,7 @@ public class ProductInquiryController {
     }
 
     // 2. 문의 상세 + 답변 리스트
-    @GetMapping("/{qnaId}")
+    @GetMapping("/products/{productId}/inquiries/{qnaId}")
     public ResponseEntity<ProductInquiryDetailDTO> getInquiryDetail(
             @PathVariable int productId,
             @PathVariable String qnaId,
@@ -50,7 +51,7 @@ public class ProductInquiryController {
     }
 
     // 3. 답변 등록
-    @PostMapping("/{qnaId}/answers")
+    @PostMapping("/products/{productId}/inquiries/{qnaId}/answers")
     public ResponseEntity<Void> createAnswer(
             @PathVariable int productId,
             @PathVariable String qnaId,
@@ -63,7 +64,7 @@ public class ProductInquiryController {
     }
 
     // 4. 답변 수정
-    @PutMapping("/{qnaId}/answers/{answerId}")
+    @PutMapping("/products/{productId}/inquiries/{qnaId}/answers/{answerId}")
     public ResponseEntity<Void> updateAnswer(
             @PathVariable int productId,
             @PathVariable String qnaId,
@@ -77,7 +78,7 @@ public class ProductInquiryController {
     }
 
     // 5. 답변 삭제
-    @DeleteMapping("/{qnaId}/answers/{answerId}")
+    @DeleteMapping("/products/{productId}/inquiries/{qnaId}/answers/{answerId}")
     public ResponseEntity<Void> deleteAnswer(
             @PathVariable int productId,
             @PathVariable String qnaId,
@@ -87,5 +88,23 @@ public class ProductInquiryController {
         String userId = (String) request.getAttribute("userId");
         productInquiryService.deleteAnswer(userId, productId, qnaId, answerId);
         return ResponseEntity.ok().build();
+    }
+    
+ // 6. 판매자 전체 상품 문의 목록 조회 (상품명, 제목, 내용 검색)
+    @GetMapping("/seller/inquiries")
+    public ResponseEntity<List<ProductInquiryDTO>> getInquiriesBySeller(
+            HttpServletRequest request,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+
+        String userId = (String) request.getAttribute("userId");
+        List<ProductInquiryDTO> inquiries = productInquiryService.getInquiriesBySeller(userId, keyword);
+        return ResponseEntity.ok(inquiries);
+    }
+    
+    @GetMapping("/seller/recentInquiries")
+    public ResponseEntity<List<ProductInquiryDTO>> getRecentUnansweredInquiries(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<ProductInquiryDTO> recentInquiries = productInquiryService.getRecentUnansweredInquiries(userId);
+        return ResponseEntity.ok(recentInquiries);
     }
 }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kosa.shoppingmaillmanager.host.dashboard.DashboardDAO">
+
+  <!-- 주문 상태별 건수 카운트 -->
+  <select id="getOrderStatusCounts" resultType="org.kosa.shoppingmaillmanager.host.product.dto.OrderStatusCountDto">
+    SELECT
+      SUM(CASE WHEN ORDER_STATUS = '결제완료' THEN 1 ELSE 0 END) AS paid,
+      SUM(CASE WHEN ORDER_STATUS = '배송준비' THEN 1 ELSE 0 END) AS preparing,
+      SUM(CASE WHEN ORDER_STATUS = '배송중' THEN 1 ELSE 0 END) AS delivering,
+      SUM(CASE WHEN ORDER_STATUS = '주문취소' THEN 1 ELSE 0 END) AS cancelled,
+      SUM(CASE WHEN ORDER_STATUS = '반품요청' THEN 1 ELSE 0 END) AS returnRequested,
+      SUM(CASE WHEN ORDER_STATUS = '교환요청' THEN 1 ELSE 0 END) AS exchangeRequested
+    FROM tb_order
+    WHERE HOST_ID = #{hostId}
+  </select>
+
+</mapper>

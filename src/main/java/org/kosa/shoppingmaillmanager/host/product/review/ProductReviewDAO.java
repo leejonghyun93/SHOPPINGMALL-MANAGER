@@ -16,4 +16,6 @@ public interface ProductReviewDAO {
     int updateReviewDisplayYn(@Param("reviewId") String reviewId, @Param("displayYn") String displayYn);
 
     String selectHostIdByProductId(@Param("productId") int productId);
+
+    List<ProductReviewDTO> selectReviewsByHostId(@Param("hostId") String hostId, @Param("keyword") String keyword);
 }
