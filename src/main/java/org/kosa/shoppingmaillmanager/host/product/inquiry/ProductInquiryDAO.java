@@ -43,4 +43,9 @@ public interface ProductInquiryDAO {
 
     // 답변 삭제
     int deleteAnswer(@Param("answerId") String answerId);
+    
+    List<ProductInquiryDTO> selectInquiriesByHostId(@Param("hostId") String hostId, @Param("keyword") String keyword);
+
+ // 7. 미답변 문의 최근 5건
+    List<ProductInquiryDTO> selectRecentUnansweredInquiries(@Param("hostId") String hostId);
 }

@@ -74,4 +74,16 @@ public class ProductInquiryService {
         }
         return hostId;
     }
+    
+ // 6. 판매자 전체 상품에 대한 문의 목록 조회
+    public List<ProductInquiryDTO> getInquiriesBySeller(String userId, String keyword) {
+        String hostId = hostDAO.findHostIdByUserId(userId);
+        return productInquiryDAO.selectInquiriesByHostId(hostId, keyword);
+    }
+    
+ // 7. 미답변 문의 최신순 상위 5개 (대시보드용)
+    public List<ProductInquiryDTO> getRecentUnansweredInquiries(String userId) {
+        String hostId = hostDAO.findHostIdByUserId(userId);
+        return productInquiryDAO.selectRecentUnansweredInquiries(hostId);
+    }
 }

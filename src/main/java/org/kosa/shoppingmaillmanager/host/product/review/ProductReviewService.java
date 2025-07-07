@@ -53,4 +53,13 @@ public class ProductReviewService {
             throw new SecurityException("해당 상품에 대한 접근 권한이 없습니다.");
         }
     }
+    
+ // 판매자가 등록한 전체 상품의 후기 목록 조회 (keyword는 상품명 or 내용 포함 검색)
+    public List<ProductReviewDTO> getReviewListByHost(String userId, String keyword) {
+        String hostId = hostDAO.findHostIdByUserId(userId);
+        if (hostId == null) {
+            throw new SecurityException("판매자 권한이 없습니다.");
+        }
+        return productReviewDAO.selectReviewsByHostId(hostId, keyword);
+    }
 }

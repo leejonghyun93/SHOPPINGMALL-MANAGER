@@ -20,27 +20,31 @@
 		r.HELPFUL_COUNT AS helpfulCount,
 		r.IS_PHOTO AS isPhoto,
 		r.created_date AS createdDate,
-		r.DISPLAY_YN AS displayYn
+		r.DISPLAY_YN AS
+		displayYn
 		FROM tb_product_review r
-		JOIN tb_product p ON r.PRODUCT_ID = p.PRODUCT_ID
+		JOIN tb_product p ON r.PRODUCT_ID =
+		p.PRODUCT_ID
 		WHERE r.PRODUCT_ID = #{productId}
-		ORDER BY r.CREATED_DATE DESC
+		ORDER BY r.CREATED_DATE
+		DESC
 	</select>
 
-	<select id="selectReviewDetailById" resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDetailDTO">
-  SELECT
-    r.review_id AS reviewId,
-    r.user_id AS userId,
-    r.content,
-    r.rating,
-    r.display_yn AS displayYn,
-    r.helpful_count AS helpfulCount,
-    r.created_date AS createdDate,
-    p.name AS productName
-  FROM tb_product_review r
-  JOIN tb_product p ON r.product_id = p.product_id
-  WHERE r.review_id = #{reviewId}
-</select>
+	<select id="selectReviewDetailById"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDetailDTO">
+		SELECT
+		r.review_id AS reviewId,
+		r.user_id AS userId,
+		r.content,
+		r.rating,
+		r.display_yn AS displayYn,
+		r.helpful_count AS helpfulCount,
+		r.created_date AS createdDate,
+		p.name AS productName
+		FROM tb_product_review r
+		JOIN tb_product p ON r.product_id = p.product_id
+		WHERE r.review_id = #{reviewId}
+	</select>
 
 	<update id="updateReviewDisplayYn">
 		UPDATE tb_product_review
@@ -51,6 +55,32 @@
 	<select id="selectHostIdByProductId" resultType="string">
 		SELECT HOST_ID
 		FROM tb_product WHERE PRODUCT_ID = #{productId}
+	</select>
+
+	<select id="selectReviewsByHostId"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductReviewDTO">
+		SELECT
+		r.REVIEW_ID AS reviewId,
+		r.PRODUCT_ID AS productId,
+		p.NAME AS productName,
+		r.AUTHOR_NAME AS authorName,
+		r.USER_ID AS userId,
+		r.CONTENT AS content,
+		r.RATING,
+		r.HELPFUL_COUNT AS helpfulCount,
+		r.IS_PHOTO AS isPhoto,
+		r.CREATED_DATE AS createdDate,
+		r.DISPLAY_YN AS displayYn
+		FROM tb_product_review r
+		JOIN tb_product p ON r.PRODUCT_ID = p.PRODUCT_ID
+		WHERE p.HOST_ID = #{hostId}
+		<if test="keyword != null and keyword != ''">
+			AND (
+			LOWER(p.NAME) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+			OR LOWER(r.CONTENT) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+			)
+		</if>
+		ORDER BY r.CREATED_DATE DESC
 	</select>
 
 </mapper>

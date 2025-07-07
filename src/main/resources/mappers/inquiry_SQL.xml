@@ -12,19 +12,24 @@
 		SELECT
 		q.QNA_ID as qnaId,
 		q.PRODUCT_ID as productId,
-		p.NAME as productName,
+		p.NAME as
+		productName,
 		q.USER_ID as userId,
 		q.TITLE as title,
 		q.CONTENT as content,
 		q.QNA_STATUS as qnaStatus,
 		q.IS_SECRET as isSecret,
-		q.VIEW_COUNT as viewCount,
+		q.VIEW_COUNT as
+		viewCount,
 		q.ANSWER_DATE as answerDate,
-		q.ANSWER_USER_ID as answerUserId,
+		q.ANSWER_USER_ID as
+		answerUserId,
 		q.CREATED_DATE as createdDate,
-		q.UPDATED_DATE as updatedDate
+		q.UPDATED_DATE as
+		updatedDate
 		FROM tb_product_qna q
-		JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
+		JOIN tb_product p ON q.PRODUCT_ID =
+		p.PRODUCT_ID
 		WHERE q.PRODUCT_ID = #{productId}
 		AND p.HOST_ID = #{hostId}
 		ORDER BY q.CREATED_DATE DESC
@@ -36,19 +41,24 @@
 		SELECT
 		q.QNA_ID as qnaId,
 		q.PRODUCT_ID as productId,
-		p.NAME as productName,
+		p.NAME as
+		productName,
 		q.USER_ID as userId,
 		q.TITLE as title,
 		q.CONTENT as content,
 		q.QNA_STATUS as qnaStatus,
 		q.IS_SECRET as isSecret,
-		q.VIEW_COUNT as viewCount,
+		q.VIEW_COUNT as
+		viewCount,
 		q.ANSWER_USER_ID as answerUserId,
-		q.CREATED_DATE as createdDate,
+		q.CREATED_DATE as
+		createdDate,
 		q.UPDATED_DATE as updatedDate
 		FROM tb_product_qna q
-		JOIN tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
-		WHERE q.PRODUCT_ID = #{productId}
+		JOIN
+		tb_product p ON q.PRODUCT_ID = p.PRODUCT_ID
+		WHERE q.PRODUCT_ID =
+		#{productId}
 		AND q.QNA_ID = #{qnaId}
 		AND p.HOST_ID = #{hostId}
 	</select>
@@ -65,7 +75,8 @@
 		resultType="string">
 		SELECT host_id
 		FROM tb_product
-		WHERE product_id = #{productId}
+		WHERE product_id =
+		#{productId}
 	</select>
 
 	<!-- 5. 특정 문의(QNA_ID)의 답변 리스트 -->
@@ -74,35 +85,104 @@
 		SELECT
 		ANSWER_ID as answerId,
 		QNA_ID as qnaId,
-		USER_ID as userId,
+		USER_ID as
+		userId,
 		CONTENT as content,
 		CREATED_DATE as createdDate,
-		UPDATED_DATE as updatedDate
+		UPDATED_DATE as
+		updatedDate
 		FROM tb_product_qna_answer
 		WHERE QNA_ID = #{qnaId}
-		ORDER BY CREATED_DATE ASC
+		ORDER BY
+		CREATED_DATE ASC
 	</select>
 
 	<!-- 6. 답변 등록 -->
 	<insert id="insertAnswer" parameterType="map">
-		INSERT INTO tb_product_qna_answer
-		(QNA_ID, USER_ID, CONTENT, CREATED_DATE, UPDATED_DATE)
+		INSERT INTO
+		tb_product_qna_answer
+		(QNA_ID, USER_ID, CONTENT, CREATED_DATE,
+		UPDATED_DATE)
 		VALUES
-		(#{qnaId}, #{answer.userId}, #{answer.content}, NOW(), NOW())
+		(#{qnaId}, #{answer.userId}, #{answer.content},
+		NOW(), NOW())
 	</insert>
 
 	<!-- 7. 답변 수정 -->
 	<update id="updateAnswer" parameterType="map">
-		UPDATE tb_product_qna_answer
+		UPDATE
+		tb_product_qna_answer
 		SET CONTENT = #{answer.content},
-		UPDATED_DATE = NOW()
+		UPDATED_DATE =
+		NOW()
 		WHERE ANSWER_ID = #{answerId}
 	</update>
 
 	<!-- 8. 답변 삭제 -->
 	<delete id="deleteAnswer" parameterType="string">
-		DELETE FROM tb_product_qna_answer
+		DELETE FROM
+		tb_product_qna_answer
 		WHERE ANSWER_ID = #{answerId}
 	</delete>
+
+	<select id="selectInquiriesByHostId" parameterType="map"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryDTO">
+		SELECT
+		q.QNA_ID as qnaId,
+		q.PRODUCT_ID as productId,
+		p.NAME as
+		productName,
+		q.USER_ID as userId,
+		q.TITLE as title,
+		q.CONTENT as content,
+		q.QNA_STATUS as qnaStatus,
+		q.IS_SECRET as isSecret,
+		q.VIEW_COUNT as
+		viewCount,
+		q.ANSWER_DATE as answerDate,
+		q.ANSWER_USER_ID as
+		answerUserId,
+		q.CREATED_DATE as createdDate,
+		q.UPDATED_DATE as
+		updatedDate
+		FROM tb_product_qna q
+		JOIN tb_product p ON q.PRODUCT_ID =
+		p.PRODUCT_ID
+		WHERE p.HOST_ID = #{hostId}
+		<if test="keyword != null and keyword != ''">
+			AND (
+			LOWER(p.NAME) LIKE CONCAT('%', LOWER(#{keyword}),
+			'%') OR
+			LOWER(q.TITLE) LIKE CONCAT('%', LOWER(#{keyword}), '%') OR
+			LOWER(q.CONTENT) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+			)
+		</if>
+		ORDER BY q.CREATED_DATE DESC
+	</select>
+
+	<select id="selectRecentUnansweredInquiries"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductInquiryDTO">
+		SELECT
+		Q.QNA_ID AS qnaId,
+		Q.PRODUCT_ID AS productId,
+		Q.USER_ID AS userId,
+		Q.TITLE AS title,
+		Q.CONTENT AS content,
+		Q.IS_SECRET AS isSecret,
+		Q.QNA_STATUS AS qnaStatus,
+		Q.CREATED_DATE AS createdDate,
+		P.NAME AS
+		productName
+		FROM
+		TB_PRODUCT_QNA Q
+		JOIN
+		TB_PRODUCT P ON Q.PRODUCT_ID = P.PRODUCT_ID
+		WHERE
+		P.HOST_ID = #{hostId}
+		AND Q.QNA_STATUS = 'WAITING'
+		ORDER BY
+		Q.CREATED_DATE DESC
+		
+	</select>
 
 </mapper>
