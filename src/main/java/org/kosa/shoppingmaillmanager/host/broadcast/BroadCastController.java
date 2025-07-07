@@ -11,14 +11,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.kosa.shoppingmaillmanager.obswebsocket.OBSControlService;
+import org.kosa.shoppingmaillmanager.page.PageResponseVO;
+import org.kosa.shoppingmaillmanager.security.AESUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,72 +42,61 @@ import lombok.extern.slf4j.Slf4j;
 public class BroadCastController {
 	
 	private final BroadCastService broadCastService;
-	private final OBSControlService obsControlService;
-	
 	private final ViewerRedisService redisService;
 	
 	 // 실제 서버에 썸네일을 저장할 디렉터리 (로컬 경로)
     private static final String UPLOAD_DIR = "C:/upload/";
-	
-    // 상품 등록
-	@PostMapping("/register")
-	public ResponseEntity<?> register(
-	        @RequestPart("broadcast") BroadCast broadCast,        // 프론트에서 전송된 방송 정보 (JSON 형식)
-	        @RequestPart("productList") String productListJson) { // 상품 목록 JSON 문자열
-	    try {
-	    	// 방송자 id를 jwt 토큰에서 user_id를 추출 
-	    	broadCast.setBroadcaster_id((String) SecurityContextHolder.getContext().getAuthentication().getPrincipal()); 
-	        
-	    	// JSON 문자열로 넘어온 productList를 자바 객체(List<BroadCastProduct>)로 변환
-	        try {
-	            ObjectMapper mapper = new ObjectMapper(); // Jackson의 JSON 파서 생성
-	            List<BroadCastProduct> productList = mapper.readValue(
-	                    productListJson, 
-	                    new TypeReference<>() {} // 제네릭 타입 유지를 위한 구조 (List<BroadCastProduct>)
-	            );
-	            broadCast.setProductList(productList); // 파싱된 리스트를 BroadCast 객체에 주입
-	        } catch (IOException e) {
-	            // JSON 파싱 실패 시 예외 처리
-	            e.printStackTrace(); 
-	         // 추후에 바깥 catch에서 걸림
-	            throw new RuntimeException("상품 리스트 JSON 파싱 실패", e); 
-	        }
+    
+    // 방송 등록
+    @PostMapping("/register")
+    public ResponseEntity<?> register(
+        @RequestPart("broadcast") BroadCast broadCast,
+        @RequestPart("productList") String productListJson) {
 
-	        // 방송 등록 서비스 호출 → DB 저장 및 스트림키 생성 등 처리
-	        BroadCastRegisterResult result = broadCastService.register(broadCast);
+        try {
+            // 방송자 ID 추출
+            String broadcaster_id = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            broadCast.setBroadcaster_id(broadcaster_id);
 
-	        // 등록된 방송 정보 가져오기
-	        BroadCast saved = result.getSaved();         // 저장된 BroadCast 엔티티
-	        String stream_key = saved.getStream_key();  // 생성된 방송 키 (고유값)
+            // OBS 정보 확인
+            if (broadCast.getObs_host() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "OBS 연결 정보가 존재하지 않습니다."));
+            }
 
-	        // RTMP / HLS URL 생성
-	        String rtmpUrl = "rtmp://192.168.4.206/stream/"; // 방송 입력 주소 (OBS용)
-	        String hlsUrl = "http://192.168.4.206:8090/live/" + stream_key + "_720p2628kbs/index.m3u8"; // 시청 URL
-	        saved.setStream_url(hlsUrl); // 방송 객체에 스트림 URL 저장
+            // 상품 JSON 파싱 (ObjectMapper 그대로 유지)
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                List<BroadCastProduct> productList = mapper.readValue(productListJson, new TypeReference<>() {});
+                broadCast.setProductList(productList);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException("상품 리스트 JSON 파싱 실패", e);
+            }
 
-	        // 클라이언트에게 응답으로 전달할 데이터 구성
-	        Map<String, Object> response = new HashMap<>();
-	        response.put("broadcast", saved);      // 등록된 방송 객체
-	        response.put("stream_key", stream_key);
-	        response.put("rtmp_url", rtmpUrl);
-	        response.put("stream_url", hlsUrl);
+            // OBS 비밀번호 암호화
+            String encryptedOBSPassword = AESUtil.encrypt(broadCast.getObs_password());
+            broadCast.setObs_password(encryptedOBSPassword);
+            
+            // 등록 처리
+            broadCastService.register(broadCast);
 
-	        return ResponseEntity.ok(response); // 상태 200 OK로 응답
+            // 프론트에 전달
+            return ResponseEntity.ok(Map.of(
+            	"broadcast", broadCast  // broadcast_id 포함 전체 객체
+            ));
 
-	    } catch (IllegalArgumentException e) {
-	        // 사용자가 잘못된 데이터를 입력했을 때
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-	                .body(Map.of("error", e.getMessage()));
-	    } catch (RuntimeException e) {
-	        // 서비스 처리 중 예외 발생 시
-	        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-	                .body(Map.of("error", e.getMessage()));
-	    } catch (Exception e) {
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                .body(Map.of("error", "등록 중 오류 발생"));
-	    }
-	}
-	
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "등록 중 오류 발생"));
+        }
+    }
 	
 	// 썸네일 업로드 요청 처리
 	@PostMapping("/uploads/thumbnail")
@@ -157,34 +149,42 @@ public class BroadCastController {
     }
     
     // 스트림 키, 스트림 url, rtmp url 등 불러오기
-    @GetMapping("/init")
-    public ResponseEntity<Map<String, Object>> initBroadcastInfo() {
-        String streamKey = UUID.randomUUID().toString();
-        String rtmpUrl = "rtmp://192.168.4.206/stream/";
-        String hlsUrl = "http://192.168.4.206:8090/live/" + streamKey + "_720p2628kbs/index.m3u8";
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("stream_key", streamKey);
-        result.put("rtmp_url", rtmpUrl);
-        result.put("stream_url", hlsUrl);
-
-        return ResponseEntity.ok(result);
-    }
-	
-//    @GetMapping("/{broadcast_id}")
-//    public ResponseEntity<?> getBroadcastInfo(@PathVariable int broadcast_id) {
-//        BroadCast broadcast = broadCastService.findById(broadcast_id);
-//        if (broadcast == null) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("방송을 찾을 수 없습니다.");
-//        }
-//        return ResponseEntity.ok(broadcast);
+//    @GetMapping("/init")
+//    public ResponseEntity<Map<String, Object>> initBroadcastInfo() {
+//        String streamKey = UUID.randomUUID().toString();
+//        String rtmpUrl = "rtmp://192.168.4.206/stream/";
+//        String hlsUrl = "http://192.168.4.206:8090/live/" + streamKey + "_720p2628kbs/index.m3u8";
+//
+//        Map<String, Object> result = new HashMap<>();
+//        result.put("stream_key", streamKey);
+//        result.put("rtmp_url", rtmpUrl);
+//        result.put("stream_url", hlsUrl);
+//
+//        return ResponseEntity.ok(result);
 //    }
     
     // 방송 정보 불러오기
     @GetMapping("/{broadcast_id}")
-    public ResponseEntity<?> getBroadcastDetail(@PathVariable("broadcast_id") int broadcastId) {
-        BroadCast broadcast = broadCastService.getBroadcastDetails(broadcastId);
-        return ResponseEntity.ok(broadcast);
+    public ResponseEntity<?> getBroadcastDetail(@PathVariable("broadcast_id") int broadcast_id) throws Exception {
+    	// 방송 정보 불러오기
+    	BroadCast b = broadCastService.getBroadcastDetails(broadcast_id);
+
+        // stream_key는 등록 시 이미 생성되어 있으므로 여기선 복호화만 하면 됨
+        String streamKey = AESUtil.decrypt(b.getStream_key());
+        
+        // rtmp 주소 설정
+        String rtmpUrl = "rtmp://" + b.getNginx_host() + "/stream/";
+
+        // hls_url : 방송 송출 url
+        String hls_url = b.getStream_url();
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("broadcast", b);
+        result.put("stream_key", streamKey);
+        result.put("rtmp_url", rtmpUrl);
+        result.put("stream_url", hls_url);        
+        
+        return ResponseEntity.ok(result);
     }
  
     
@@ -193,7 +193,7 @@ public class BroadCastController {
     public ResponseEntity<?> startBroadcast(@RequestBody Map<String, Object> req) {
         
     	// 클라이언트에서 넘어온 방송 ID 추출
-    	int broadcast_id = Integer.valueOf(req.get("broadcast_id").toString());
+    	 int broadcast_id = Integer.parseInt(req.get("broadcast_id").toString());
     	
     	// 인증 객체 수동으로 가져오기
     	Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -223,7 +223,8 @@ public class BroadCastController {
 
         try {
         	// OBS에 방송 시작 명령 전송
-        	obsControlService.startStreaming();
+        	broadCastService.startStreaming(broadcast_id);
+        	log.info("🚀 OBS 스트리밍 시작 요청 전송");
         	
         	// 방송 상태를 START로 변경
             broadcast.setBroadcast_status("start");
@@ -282,14 +283,17 @@ public class BroadCastController {
 
         try {
         	// OBS에 방송 시작 명령 전송
-        	obsControlService.stopStreaming();
+        	broadCastService.stopStreaming(broadcast_id);
         	
-        	// 방송 상태를 START로 변경
+        	// 방송 상태를 STOP로 변경
             broadcast.setBroadcast_status("stop");
             
             // 변경된 방송 정보를 DB에 저장
             broadCastService.updateStatus(broadcast);
 
+//            String recordedFilePath = obsControlService.stopRecordingAndGetFilePath(); // OBS → 녹화 종료 + 파일 경로 받음
+//            broadCastService.uploadToSpringServer(broadcast_id, recordedFilePath); // Spring upload API로 업로드 요청 보내기
+            
             // 성공 응답 반환 (Stream_url 포함)
             return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -308,6 +312,51 @@ public class BroadCastController {
     public ResponseEntity<Long> getViewerCount(@PathVariable int broadcast_id) {
     	long count = redisService.getCount(broadcast_id);
         return ResponseEntity.ok(count);
+    }
+    
+    @GetMapping("/list")
+    public ResponseEntity<PageResponseVO<BroadCastListDTO>> broadcastList(
+    		@ModelAttribute BroadCastListDTO dto){
+    	
+    	PageResponseVO<BroadCastListDTO> pageResponse = broadCastService.list(dto);
+    	return ResponseEntity.ok(pageResponse);
+    			
+    }
+    
+    // 방송 정보 불러오기
+    @GetMapping("/detail/{broadcast_id}")
+    public ResponseEntity<?> getBroadcastDetailView(@PathVariable("broadcast_id") int broadcastId) {
+        BroadCast broadcast = broadCastService.getBroadcastDetailsView(broadcastId);
+        return ResponseEntity.ok(broadcast);
+    }
+    
+    // 방송 상태 변경
+    @PutMapping("/status")
+    public ResponseEntity<?> updateStatus(@RequestBody BroadCast broadCast) {
+        broadCastService.updateStatus(broadCast);
+        return ResponseEntity.ok().body(Map.of("result", "success"));
+    } 
+    
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadRecording(@RequestParam MultipartFile file,
+                @RequestParam("broadcast_id") int broadcastId) {
+        String saveDir = "C:/upload/recordings/"; // 받아온 영상을 저장할 경로
+        File dir = new File(saveDir); // 만들어진 경로를 파일 형태로 변환
+        if (!dir.exists()) dir.mkdirs(); // 해당 경로가 없을 경우 직접 생성
+
+        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename(); // 파일명 임의 생성
+        String videoUrl = "/upload/recordings/" + filename; // db에 저장할 동영상 주소
+
+        try {
+            file.transferTo(new File(saveDir + filename)); // 저장경로 + 파일명 합쳐서 파일로 변환
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 저장 실패");
+        }
+
+        //  여기서 DB에 video_url 저장
+        broadCastService.updateVideoUrl(broadcastId, videoUrl);
+
+        return ResponseEntity.ok(videoUrl);
     }
     
 }
