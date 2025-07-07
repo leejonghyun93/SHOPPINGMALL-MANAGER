@@ -31,16 +31,27 @@ public class BroadCast {
 	private int like_count;                 // 좋아요 수
 	private String thumbnail_url;           // 썸네일 이미지 URL
 	private String stream_url;              // 스트림 URL
-	private int category_id;                // 카테고리 ID (tb_category 참조)
+	private Long category_id;                // 카테고리 ID (tb_category 참조)
 	private String tags;                    // 태그 목록 (콤마 구분)
 	private String created_at;              // 생성일시
 	private String updated_at;              // 수정일시
 	private String stream_key; 			// 스트림 key
+	private String video_url;				// 비디오 url
+	
+	private String category_name;		// 카테고리명
 
+	// OBS 연결 관련 필드
+	private String obs_host; 				// obs 설치된 pc의 ip주소
+	private int obs_port;						// obs Websocket 포트번호
+	private String obs_password;			// obs Websocket 비밀번호
+	
+	// nginx 서버 관련 필드
+	private String nginx_host;				// docker 설치된 ip 주소
+	
 	// 상품 목록
 	private List<BroadCastProduct> productList;
 	
-	// 상품 목록
+	// 시청자 목록
 	private List<BroadCastViewer> viewerList;
 	
 	// 카테고리 불러오기
