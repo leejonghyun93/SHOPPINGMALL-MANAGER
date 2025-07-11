@@ -23,11 +23,11 @@
 	
 	<insert id="insertMember">
 		INSERT into tb_member 
-		(user_id, password, name, email, phone, zipcode, address, birth_date,
-		 gender, profile_img, marketing_agree, grade_id)
-		VALUES (#{user_id}, #{password}, #{name}, #{email}, #{phone}, 
-		#{zipcode}, #{address}, #{birth_date}, #{gender}, 
-		#{profile_img}, #{marketing_agree}, "HOST")
+		(user_id, password, name, nickname, email, phone, zipcode, address, myaddress,
+		 birth_date, gender, profile_img, marketing_agree, grade_id)
+		VALUES (#{user_id}, #{password}, #{name}, #{nickname}, #{email}, 
+		#{phone}, #{zipcode}, #{address}, #{myaddress}, #{birth_date},
+		#{gender}, #{profile_img}, #{marketing_agree}, "HOST")
 	</insert>
 	
 	<insert id="insertHost">
@@ -71,5 +71,224 @@
 	
 	<update id="updatePassword">
 	    UPDATE tb_member SET password = #{password} WHERE user_id = #{user_id}
+	</update>
+	
+	<select id="getUserList" resultType="org.kosa.shoppingmaillmanager.user.UserListDTO">
+		SELECT *
+		FROM tb_member
+		<where>
+		<choose>
+		  <when test="filterType eq 'locked'">
+		  	AND secession_yn = 'N'
+		    AND blacklisted = 'Y'
+		    OR status = 'N'
+		  </when>
+		  <when test="filterType eq 'widthdrawn'">
+		    AND secession_yn = 'Y'
+		  </when>
+		  <otherwise>
+		    <if test="excludeGrades != null">
+		      grade_id NOT IN
+		      <foreach item="grade" collection="excludeGrades" open="(" separator="," close=")">
+		        #{grade}
+		      </foreach>
+		    </if>
+		    <if test="grade_id != null and grade_id != ''">
+		      AND grade_id = #{grade_id}
+		    </if>
+		    <if test="blacklisted != null">
+		      AND blacklisted = #{blacklisted}
+		    </if>
+		    <if test="status != null">
+		      AND status = #{status}
+		    </if>
+		    <if test="secession_yn != null">
+		      AND secession_yn = #{secession_yn}
+		    </if>
+		  </otherwise>
+		</choose>
+		  
+			<if test="searchValue != null and searchValue !=''">
+				<choose>
+					<when test="searchColumn == null or searchColumn == ''">
+					AND (
+						user_id LIKE CONCAT('%', #{searchValue}, '%')
+						OR name LIKE CONCAT('%', #{searchValue}, '%')
+					)
+					</when>
+					<when test="searchColumn == 'user_id'">
+						AND user_id LIKE CONCAT('%', #{searchValue}, '%')
+					</when>
+					<when test="searchColumn == 'name'">
+						AND name LIKE CONCAT('%', #{searchValue}, '%')
+					</when>
+					<when test="searchColumn == 'nickname'">
+						AND nickname LIKE CONCAT('%', #{searchValue}, '%')
+					</when>
+				</choose>
+			</if>
+		</where>
+		<choose>
+			<when test="sortOption == 'created_date_desc'">
+				ORDER BY created_date DESC
+			</when>
+			<when test="sortOption == 'created_date_asc'">
+				ORDER BY created_date ASC
+			</when>
+			<when test="sortOption == 'user_id_desc'">
+				ORDER BY user_id DESC
+			</when>
+			<when test="sortOption == 'user_id_asc'">
+				ORDER BY user_id ASC
+			</when>
+			<when test="sortOption == 'name_desc'">
+				ORDER BY name DESC
+			</when>
+			<when test="sortOption == 'name_asc'">
+				ORDER BY name ASC
+			</when>
+			<when test="sortOption == 'nickname_desc'">
+				ORDER BY nickname DESC
+			</when>
+			<when test="sortOption == 'nickname_asc'">
+				ORDER BY nickname ASC
+			</when>
+			<otherwise>
+				ORDER BY created_date DESC
+			</otherwise>
+		</choose>
+		LIMIT #{size} OFFSET #{start}
+	</select>
+	
+	
+	<select id="countUserList" resultType="int">
+		SELECT count(distinct user_id) FROM tb_member
+		<where>
+		<choose>
+		  <when test="filterType eq 'locked'">
+		  	AND secession_yn = 'N'
+		    AND blacklisted = 'Y'
+		    OR status = 'N'
+		  </when>
+		  <when test="filterType eq 'widthdrawn'">
+		    AND secession_yn = 'Y'
+		  </when>
+		  <otherwise>
+		    <if test="excludeGrades != null">
+		      grade_id NOT IN
+		      <foreach item="grade" collection="excludeGrades" open="(" separator="," close=")">
+		        #{grade}
+		      </foreach>
+		    </if>
+		    <if test="grade_id != null and grade_id != ''">
+		      AND grade_id = #{grade_id}
+		    </if>
+		    <if test="blacklisted != null">
+		      AND blacklisted = #{blacklisted}
+		    </if>
+		    <if test="status != null">
+		      AND status = #{status}
+		    </if>
+		    <if test="secession_yn != null">
+		      AND secession_yn = #{secession_yn}
+		    </if>
+		  </otherwise>
+		</choose>
+		
+		  <if test="status != null">
+		    AND status = #{status}
+		  </if>
+			<if test="searchValue != null and searchValue !=''">
+				<choose>
+					<when test="searchColumn == null or searchColumn == ''">
+					AND (
+						user_id LIKE CONCAT('%', #{searchValue}, '%')
+						OR name LIKE CONCAT('%', #{searchValue}, '%')
+					)
+					</when>
+					<when test="searchColumn == 'user_id'">
+						AND user_id LIKE CONCAT('%', #{searchValue}, '%')
+					</when>
+					<when test="searchColumn == 'name'">
+						AND name LIKE CONCAT('%', #{searchValue}, '%')
+					</when>
+					<when test="searchColumn == 'nickname'">
+						AND nickname LIKE CONCAT('%', #{searchValue}, '%')
+					</when>
+				</choose>
+			</if>
+		</where>
+		<choose>
+			<when test="sortOption == 'created_date_desc'">
+				ORDER BY created_date DESC
+			</when>
+			<when test="sortOption == 'created_date_asc'">
+				ORDER BY created_date ASC
+			</when>
+			<when test="sortOption == 'user_id_desc'">
+				ORDER BY user_id DESC
+			</when>
+			<when test="sortOption == 'user_id_asc'">
+				ORDER BY user_id ASC
+			</when>
+			<when test="sortOption == 'name_desc'">
+				ORDER BY name DESC
+			</when>
+			<when test="sortOption == 'name_asc'">
+				ORDER BY name ASC
+			</when>
+			<otherwise>
+				ORDER BY created_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<update id="updateUser" parameterType="org.kosa.shoppingmaillmanager.user.User">
+	  UPDATE tb_member
+	  SET
+	    password = #{password},
+	    name = #{name},
+	    email = #{email},
+	    phone = #{phone},
+	    zipcode = #{zipcode},
+	    address = #{address},
+	    birth_date = #{birth_date},
+	    gender = #{gender},
+	    succession_yn = #{succession_yn},
+	    blacklisted = #{blacklisted},
+	    session_date = #{session_date},
+	    login_fail_cnt = #{login_fail_cnt},
+	    status = #{status},
+	    last_login = #{last_login},
+	    marketing_agree = #{marketing_agree},
+	    social_id = #{social_id},
+	    marketing_agent = #{marketing_agent},
+	    grade_id = #{grade_id},
+	    myaddress = #{myaddress},
+	    secession_yn = #{secession_yn},
+	    secession_date = #{secession_date},
+	    profile_img = #{profile_img},
+	    social_type = #{social_type},
+	    nickname = #{nickname},
+	    updated_date = NOW()
+	   WHERE user_id = #{user_id};
+	</update>
+	
+	<update id="updateHost">
+		UPDATE tb_host SET
+		    business_no = #{business_no},
+	        bank_name = #{bank_name},
+	        account_no = #{account_no},
+	        channel_name = #{channel_name},
+	        intro = #{intro},
+	        approved_yn = #{approved_yn}
+	  	WHERE user_id = #{user_id};
+	</update>
+	
+	<update id="secessionUser">
+		UPDATE tb_member SET
+		secession_yn = 'Y',
+		secession_date = NOW()
+		WHERE user_id = #{user_id}
 	</update>
 </mapper>

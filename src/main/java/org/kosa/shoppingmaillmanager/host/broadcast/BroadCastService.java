@@ -108,11 +108,13 @@ public class BroadCastService {
 	}
 
 	public void updateStatus(BroadCast broadCast) {
+
 		broadCastDAO.updateStatus(broadCast);
 
 		messagingTemplate.convertAndSend("/topic/broadcast/" + broadCast.getBroadcast_id() + "/status",
 				Map.of("status", broadCast.getBroadcast_status()));
 	}
+
 
 	// 시청자 입장 메소드
 	public void onViewerJoined(int broadcastId, BroadCastViewer viewer) {
@@ -240,6 +242,7 @@ public class BroadCastService {
 	 */
 
 	// 방송 종료 메서드 (broadcast_id는 방송 고유 번호)
+
 	public void stopStreaming(int broadcast_id) throws Exception {
 		// 1. DB에서 방송 ID로 방송 정보 조회
 		BroadCast broadCast = broadCastDAO.findById(broadcast_id);
@@ -305,32 +308,40 @@ public class BroadCastService {
 // 	            		     // 9. 응답 데이터가 Map 형태가 아니면 경고 로그 출력
 // 	            			 log.warn("⚠️ 예상치 못한 응답 형식: {}", responseData);
 // 	            		   }
+ 	            		   
+ 	            		//  여기서 타입 캐스팅
+ 	            	        if (responseData instanceof StopRecordResponse.SpecificData data) {
+ 	            	            String outputPath = data.getOutputPath();
+ 	            	           
 
-								// 여기서 타입 캐스팅
-								if (responseData instanceof StopRecordResponse.SpecificData data) {
-									String outputPath = data.getOutputPath();
+ 	            	            try {
+ 	            	                uploadToSpringServer(outputPath, broadcast_id);
+ 	            	               log.info("📁 녹화 파일 경로: {}", outputPath);
+ 	            	            } catch (Exception e) {
+ 	            	                log.error("❌ 업로드 실패", e);
+ 	            	            }
+ 	            	        } else {
+ 	            	            log.warn("⚠️ 예상치 못한 응답 형식: {}", responseData);
+ 	            	        }
+ 	            		   
+ 	            		 }
+ 	            	);
+ 	            })
+ 	            .onHello(ctx -> 
+ 	                log.info("👋 HELLO 수신 - IDENTIFY 준비됨") // 서버에서 HELLO 수신 시 출력됨
+ 	            )
+ 	            .onDisconnect(() -> 
+ 	                log.info("❌ 방송자 [{}] OBS 연결 해제", broadcast_id) // 연결 종료 시
+ 	            )
+ 	            .and()
+ 	        .build();
 
-									try {
-										uploadToSpringServer(outputPath, broadcast_id);
-										log.info("📁 녹화 파일 경로: {}", outputPath);
-									} catch (Exception e) {
-										log.error("❌ 업로드 실패", e);
-									}
-								} else {
-									log.warn("⚠️ 예상치 못한 응답 형식: {}", responseData);
-								}
+ 	    // 8. 람다에서 참조할 수 있도록 AtomicReference에 저장
+ 	    ref.set(client);
 
-							});
-				}).onHello(ctx -> log.info("👋 HELLO 수신 - IDENTIFY 준비됨") // 서버에서 HELLO 수신 시 출력됨
-				).onDisconnect(() -> log.info("❌ 방송자 [{}] OBS 연결 해제", broadcast_id) // 연결 종료 시
-				).and().build();
-
-		// 8. 람다에서 참조할 수 있도록 AtomicReference에 저장
-		ref.set(client);
-
-		// 9. OBS WebSocket 연결 시도 (비동기)
-		client.connect();
-	}
+ 	    // 9. OBS WebSocket 연결 시도 (비동기)
+ 	    client.connect();
+ 	}
 
 	public void update(BroadCast b) {
 		// TODO Auto-generated method stub
@@ -346,85 +357,88 @@ public class BroadCastService {
 	public String getLocalIp() {
 		try {
 			// 현재 시스템에 존재하는 모든 네트워크 인터페이스(유선랜, 와이파이, 가상 어댑터 등)를 순회
-			for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
 
-				// 해당 인터페이스에 연결된 모든 IP 주소를 순회 (IPv4, IPv6 포함)
-				for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
-
-					// 조건 1: 루프백 주소는 제외 (예: 127.0.0.1 → 자기 자신용 주소는 사용 X)
-					// 조건 2: IPv4 주소만 추출 (IPv6 주소는 제외)
-					if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
-
-						// 조건을 만족하는 첫 번째 IPv4 주소를 반환 (예: 192.168.0.101)
-						return addr.getHostAddress();
-					}
-				}
-			}
+		   for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+		             
+		   // 해당 인터페이스에 연결된 모든 IP 주소를 순회 (IPv4, IPv6 포함)
+		   for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+		
+		       // 조건 1: 루프백 주소는 제외 (예: 127.0.0.1 → 자기 자신용 주소는 사용 X)
+		       // 조건 2: IPv4 주소만 추출 (IPv6 주소는 제외)
+		       if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
+		
+		                     // 조건을 만족하는 첫 번째 IPv4 주소를 반환 (예: 192.168.0.101)
+		                     return addr.getHostAddress();
+		                 }
+		             }
+		        }
 		} catch (Exception e) {
-			// 예외 발생 시 로그 출력 (예: 인터페이스 조회 실패 등)
-			e.printStackTrace();
+		         // 예외 발생 시 로그 출력 (예: 인터페이스 조회 실패 등)
+		         e.printStackTrace();
 		}
-
+		
 		// 조건에 맞는 IP를 찾지 못하거나 예외 발생 시 fallback 값으로 "localhost" 반환
 		return "localhost";
 	}
-
+	
+	
 	// 녹화된 영상 파일을 Spring 서버에 업로드하는 메서드
 	public void uploadToSpringServer(String filePath, int broadcastId) throws java.io.IOException {
-		// 업로드할 파일 객체 생성 (파일 경로로부터)
-		File file = new File(filePath);
+	    // 업로드할 파일 객체 생성 (파일 경로로부터)
+	    File file = new File(filePath);
 
-		// 파일이 생성되었는지 최대 10번 재시도
-		int retry = 0;
-		while (!file.exists() && retry++ < 10) {
-			log.warn("⏳ 파일 아직 존재하지 않음. 재시도 중... ({})", retry);
-			try {
-				Thread.sleep(500); // 0.5초 대기
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				log.error("❌ 파일 대기 중 인터럽트 발생", e);
-			}
-		}
+		 // 파일이 생성되었는지 최대 10번 재시도
+		    int retry = 0;
+		    while (!file.exists() && retry++ < 10) {
+		        log.warn("⏳ 파일 아직 존재하지 않음. 재시도 중... ({})", retry);
+		        try {
+		            Thread.sleep(500); // 0.5초 대기
+		        } catch (InterruptedException e) {
+		            Thread.currentThread().interrupt();
+		            log.error("❌ 파일 대기 중 인터럽트 발생", e);
+		        }
+		    }
 
-		// 파일이 존재하지 않을 경우 업로드 중단
-		if (!file.exists()) {
-			System.out.println("❌ 업로드 실패: 파일이 존재하지 않습니다.");
-			return;
-		}
+	    
+	    // 파일이 존재하지 않을 경우 업로드 중단
+	    if (!file.exists()) {
+	        System.out.println("❌ 업로드 실패: 파일이 존재하지 않습니다.");
+	        return;
+	    }
 
-		// HTTP 요청을 보내기 위한 클라이언트 객체 생성 (자동 자원 해제)
-		try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+	    // HTTP 요청을 보내기 위한 클라이언트 객체 생성 (자동 자원 해제)
+	    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-			// 업로드 요청을 보낼 대상 주소 (Spring 서버의 /video/upload 엔드포인트 : 컨트롤러로 요청 보냄)
-			HttpPost post = new HttpPost("http://" + getLocalIp() + ":8080/video/upload");
-			log.info("업로드요청 링크 : " + post);
-			// multipart/form-data 형식으로 요청 본문 구성
-			HttpEntity entity = MultipartEntityBuilder.create()
-					// 바이너리 파일 전송 (form name: file)
-					.addBinaryBody("file", file, ContentType.DEFAULT_BINARY, file.getName())
-					// 방송 ID 전송 (form name: broadcast_id)
-					.addTextBody("broadcast_id", String.valueOf(broadcastId), ContentType.TEXT_PLAIN).build(); // 최종
-																												// MultipartEntity
-																												// 완성
+	        // 업로드 요청을 보낼 대상 주소 (Spring 서버의 /video/upload 엔드포인트 : 컨트롤러로 요청 보냄)
+	        HttpPost post = new HttpPost("http://" + getLocalIp() +":8080/video/upload");
+	        log.info("업로드요청 링크 : " + post);
+	        // multipart/form-data 형식으로 요청 본문 구성
+	        HttpEntity entity = MultipartEntityBuilder.create()
+	                // 바이너리 파일 전송 (form name: file)
+	                .addBinaryBody("file", file, ContentType.DEFAULT_BINARY, file.getName())
+	                // 방송 ID 전송 (form name: broadcast_id)
+	                .addTextBody("broadcast_id", String.valueOf(broadcastId), ContentType.TEXT_PLAIN)
+	                .build(); // 최종 MultipartEntity 완성
 
-			// 구성된 multipart entity를 POST 요청에 첨부
-			post.setEntity(entity);
+	        // 구성된 multipart entity를 POST 요청에 첨부
+	        post.setEntity(entity);
 
-			// 응답을 처리할 핸들러 정의 (비동기 방식 아님, 간단한 콜백 처리)
-			HttpClientResponseHandler<Void> responseHandler = (ClassicHttpResponse response) -> {
-				int status = response.getCode(); // 응답 코드 (예: 200, 500 등)
-				System.out.println("✅ 응답 코드: " + status); // 콘솔 출력
-				return null; // 반환값 필요 없음
-			};
+	        // 응답을 처리할 핸들러 정의 (비동기 방식 아님, 간단한 콜백 처리)
+	        HttpClientResponseHandler<Void> responseHandler = (ClassicHttpResponse response) -> {
+	            int status = response.getCode(); // 응답 코드 (예: 200, 500 등)
+	            System.out.println("✅ 응답 코드: " + status); // 콘솔 출력
+	            return null; // 반환값 필요 없음
+	        };
 
-			// 요청 전송 + 응답 핸들러로 결과 처리
-			httpClient.execute(post, responseHandler);
+	        // 요청 전송 + 응답 핸들러로 결과 처리
+	        httpClient.execute(post, responseHandler);
 
-		} catch (IOException e) {
-			// 네트워크 오류, 파일 I/O 오류 등 예외 발생 시 처리
-			System.out.println("❌ 업로드 중 예외 발생");
-			e.printStackTrace();
-		}
+	    } catch (IOException e) {
+	        // 네트워크 오류, 파일 I/O 오류 등 예외 발생 시 처리
+	        System.out.println("❌ 업로드 중 예외 발생");
+	        e.printStackTrace();
+	    }
 	}
+	
 
 }

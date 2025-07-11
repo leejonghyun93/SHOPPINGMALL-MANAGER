@@ -1,5 +1,9 @@
 package org.kosa.shoppingmaillmanager.user;
 
+import java.util.List;
+
+import org.kosa.shoppingmaillmanager.host.order.OrderListDTO;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,6 +41,7 @@ public class User {
     private String secession_date;  // 탈퇴 처리 날짜
     private String profile_img;     // 프로필 이미지 URL
     private String social_type;     // 소셜 로그인 타입 (예: KAKAO, GOOGLE)
+    private String nickname;		// 닉네임
 
     // 아래는 호스트 테이블의 컬럼
     private String business_no;     // 사업자 등록 번호
@@ -45,4 +50,9 @@ public class User {
     private String channel_name;    // 라이브 방송 채널명
     private String intro;           // 소개글
     private String approved_yn;     // 관리자 승인 여부 (Y/N)
+    
+    // 아래는 관리자 테이블의 컬럼
+    private String access_level;		// 권한 등급
+    
+    private List<OrderListDTO> orderList;	// 주문 목록
 }

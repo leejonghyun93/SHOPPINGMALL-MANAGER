@@ -75,5 +75,9 @@ public class OrderService {
 	public void cancelOrders(List<String> order_ids) {
 		orderDAO.updateOrderStatusMutilCancelled(order_ids);
 	}
+
+	public List<OrderByUserDTO> getOrderByUser(String user_id) {
+		return orderDAO.getOrderByUser(user_id);
+	}
 }
 
