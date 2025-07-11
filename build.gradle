@@ -76,6 +76,10 @@ dependencies {
 
 	// Redis 의존성 추가
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	
+	// httpClient 의존성 추가
+	implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+	implementation 'org.apache.httpcomponents.client5:httpmime5:5.2.1'
 }
 
 tasks.named('test') {

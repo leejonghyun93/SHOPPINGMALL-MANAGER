@@ -1,5 +1,10 @@
 package org.kosa.shoppingmaillmanager.user;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.kosa.shoppingmaillmanager.page.PageResponseVO;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +31,7 @@ public class UserService {
 	    }
 
 	    User dbUser = userDAO.getUser(userId);
-	    if (dbUser == null) {
+	    if (dbUser == null || "Y".equals(dbUser.getSecession_yn())) {
 	    	throw new RuntimeException("아이디가 존재하지 않습니다.");
 	    }
 	    if (!passwordEncoder.matches(password, dbUser.getPassword())) {
@@ -41,8 +46,15 @@ public class UserService {
 	        }
 	    }
 
-	    if ("N".equals(dbUser.getApproved_yn()) || !"HOST".equals(dbUser.getGrade_id())) {
+	    if (!"HOST".equals(dbUser.getGrade_id()) &&
+	    	!"ADMIN".equals(dbUser.getGrade_id())) {
 	        throw new RuntimeException("로그인 권한이 없습니다.");
+	    }
+	    
+	    if ("HOST".equals(dbUser.getGrade_id())) {
+	    	if ("N".equals(dbUser.getApproved_yn())) {
+	    		throw new RuntimeException("로그인 권한이 없습니다.");
+	    	}
 	    }
 
 	    if ("N".equals(dbUser.getStatus())) {
@@ -87,7 +99,6 @@ public class UserService {
 	}
 
 	public User getUser(String user_id) {
-		// TODO Auto-generated method stub
 		return userDAO.getUser(user_id);
 	}
 
@@ -107,4 +118,64 @@ public class UserService {
 	}
 
 
+	public PageResponseVO<UserListDTO> userList(UserListDTO dto) {
+		System.out.println(dto.getFilterType());
+		dto.applyFilterType(); // 필터 타입에 따라 조건 자동 설정
+		
+		int start = (dto.getPageNo() - 1) * dto.getSize();
+		
+		Map<String, Object> map = new HashMap<>();
+		map.put("start", start);
+		map.put("size", dto.getSize());
+		map.put("searchColumn" ,dto.getSearchColumn());
+		map.put("searchValue", dto.getSearchValue());
+		map.put("sortOption", dto.getSortOption());
+		map.put("user_id", dto.getUser_id());
+		map.put("name", dto.getName());
+		map.put("nickname", dto.getNickname());
+		map.put("email", dto.getEmail());
+		map.put("phone", dto.getPhone());
+		map.put("address", dto.getAddress());
+		map.put("gender", dto.getGender());
+		map.put("created_date", dto.getCreated_date());
+		map.put("blacklisted", dto.getBlacklisted());
+		map.put("status", dto.getStatus());
+		map.put("grade_id", dto.getGrade_id());
+		map.put("secession_yn", dto.getSecession_yn());
+		map.put("secession_date", dto.getSecession_date());
+		
+		// 역할별 필터링 처리
+	    if (dto.isExcludeAdminAndHost()) {
+	        map.put("excludeGrades", List.of("ADMIN", "HOST"));
+	    } else if (dto.getGrade_id() != null) {
+	        map.put("grade_id", dto.getGrade_id());
+	    }
+	    
+	    map.put("blacklisted", dto.getBlacklisted());
+	    map.put("status", dto.getStatus());
+	    map.put("filterType", dto.getFilterType());
+		
+		List<UserListDTO> list = userDAO.getUserList(map);
+	    int total = userDAO.countUserList(map);
+	    System.out.println("🧾 조건 map: " + map);
+	    return new PageResponseVO<>(dto.getPageNo(), list, total, dto.getSize());
+	}
+
+	@Transactional
+	public boolean updateUser(User user) {
+		try {
+			userDAO.updateUser(user);
+			userDAO.updateHost(user);
+			return true;
+		} catch (Exception e) {
+			log.info("수정 실패");
+			return false;
+		}
+		
+	}
+
+
+	public boolean secessionUser(String user_id) {
+		return userDAO.secessionUser(user_id) > 0;
+	}
 }

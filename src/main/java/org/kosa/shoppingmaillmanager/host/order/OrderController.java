@@ -60,6 +60,17 @@ public class OrderController {
 	    return ResponseEntity.ok(order); // 200 + JSON 바디
 	}
 	
+	@GetMapping("/user-detail")
+	public ResponseEntity<List<OrderByUserDTO>> userDetail(@RequestParam String user_id){
+		List<OrderByUserDTO> order = orderService.getOrderByUser(user_id);
+		
+//		if (order == null) {
+//			return ResponseEntity.ok(order); // 빈 객체 반환
+//	    }
+
+	    return ResponseEntity.ok(order); // 200 + JSON 바디
+	}
+	
 	@PutMapping("/detail")
 	public ResponseEntity<String> updateRecipientInfo(@RequestBody OrderDetailDTO orderDetailDTO) {
 	    boolean success = orderService.updateRecipient(orderDetailDTO);
