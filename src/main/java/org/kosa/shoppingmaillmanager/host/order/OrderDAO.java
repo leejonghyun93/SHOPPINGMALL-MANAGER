@@ -16,4 +16,5 @@ public interface OrderDAO {
 	public List<String> getPagedOrderIds(Map<String, Object> map);
 	public List<OrderItemDTO> getOrderItemsByOrderId(String order_id);
 	public int updateOrderItemStatusToCancelled(String order_id);
+	public List<OrderByUserDTO> getOrderByUser(String user_id);
 }

@@ -330,4 +330,19 @@
 	        #{id}
 	    </foreach>;
 	</update>
+	
+	<select id="getOrderByUser" resultType="org.kosa.shoppingmaillmanager.host.order.OrderByUserDTO">
+	  SELECT 
+	    o.order_id,
+	    o.order_date,
+	    o.payment_method,
+	    i.total_price,
+	    i.status,
+	    p.name as product_name
+	  FROM tb_order o
+	  JOIN tb_order_item i ON o.order_id = i.order_id
+	  JOIN tb_product p ON i.product_id = p.product_id
+	  WHERE o.user_id = #{user_id}
+	  ORDER BY o.order_date DESC
+	</select>
 </mapper>

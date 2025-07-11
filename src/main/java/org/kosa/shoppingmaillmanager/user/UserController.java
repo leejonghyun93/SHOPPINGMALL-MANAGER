@@ -4,15 +4,17 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.kosa.shoppingmaillmanager.page.PageResponseVO;
 import org.kosa.shoppingmaillmanager.security.JwtUtil;
 import org.kosa.shoppingmaillmanager.security.RefreshTokenService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -183,45 +185,50 @@ public class UserController {
 //	}
 	
 	// 로그아웃
+//	@PostMapping("/logout")
+//	public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+//
+//	    // 1. 요청 헤더에서 Authorization 값을 가져옴 (Bearer {AccessToken} 형식)
+//	    String authHeader = request.getHeader("Authorization");
+//
+//	    // 2. Authorization 헤더가 없거나 "Bearer " 형식이 아니면 401 반환
+//	    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+//	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authorization 헤더 없음");
+//	    }
+//
+//	    // 3. "Bearer " 접두사를 제거하고 실제 AccessToken만 추출
+//	    String token = authHeader.substring(7);
+//
+//	    // 4. 토큰을 검증하고, 유효하면 해당 토큰의 사용자 ID 추출
+//	    String userId;
+//	    try {
+//	        userId = jwtUtil.validateTokenAndGetUserId(token); // 👉 유효하지 않으면 예외 발생
+//	    } catch (Exception e) {
+//	        // 5. 토큰이 만료되었거나 변조된 경우 → 401 Unauthorized 응답
+//	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰");
+//	    }
+//
+//	    // 6. 서버에 저장된 해당 사용자의 refreshToken 제거
+//	    refreshTokenService.delete(userId);
+//
+//	    // 7. 클라이언트 측에 저장된 refreshToken 쿠키를 삭제하기 위한 설정
+//	    ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "") // 쿠키 이름은 동일하게 설정해야 삭제됨
+//	        .httpOnly(true)        // JS에서 접근 못 하게 막음 (보안 강화)
+//	        .secure(true)          // HTTPS에서만 전송 (로컬에서는 false로 설정 가능)
+//	        .path("/")             // 모든 경로에 대해 삭제 적용
+//	        .maxAge(0)             // 만료 시간 0초 → 즉시 삭제
+//	        .build();
+//
+//	    // 8. 응답 헤더에 Set-Cookie를 추가하여 클라이언트의 쿠키 삭제 유도
+//	    response.setHeader("Set-Cookie", deleteCookie.toString());
+//
+//	    // 9. 최종적으로 로그아웃 성공 메시지를 응답으로 반환
+//	    return ResponseEntity.ok("로그아웃 완료");
+//	}
+	
 	@PostMapping("/logout")
-	public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
-
-	    // 1. 요청 헤더에서 Authorization 값을 가져옴 (Bearer {AccessToken} 형식)
-	    String authHeader = request.getHeader("Authorization");
-
-	    // 2. Authorization 헤더가 없거나 "Bearer " 형식이 아니면 401 반환
-	    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authorization 헤더 없음");
-	    }
-
-	    // 3. "Bearer " 접두사를 제거하고 실제 AccessToken만 추출
-	    String token = authHeader.substring(7);
-
-	    // 4. 토큰을 검증하고, 유효하면 해당 토큰의 사용자 ID 추출
-	    String userId;
-	    try {
-	        userId = jwtUtil.validateTokenAndGetUserId(token); // 👉 유효하지 않으면 예외 발생
-	    } catch (Exception e) {
-	        // 5. 토큰이 만료되었거나 변조된 경우 → 401 Unauthorized 응답
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰");
-	    }
-
-	    // 6. 서버에 저장된 해당 사용자의 refreshToken 제거
-	    refreshTokenService.delete(userId);
-
-	    // 7. 클라이언트 측에 저장된 refreshToken 쿠키를 삭제하기 위한 설정
-	    ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "") // 쿠키 이름은 동일하게 설정해야 삭제됨
-	        .httpOnly(true)        // JS에서 접근 못 하게 막음 (보안 강화)
-	        .secure(true)          // HTTPS에서만 전송 (로컬에서는 false로 설정 가능)
-	        .path("/")             // 모든 경로에 대해 삭제 적용
-	        .maxAge(0)             // 만료 시간 0초 → 즉시 삭제
-	        .build();
-
-	    // 8. 응답 헤더에 Set-Cookie를 추가하여 클라이언트의 쿠키 삭제 유도
-	    response.setHeader("Set-Cookie", deleteCookie.toString());
-
-	    // 9. 최종적으로 로그아웃 성공 메시지를 응답으로 반환
-	    return ResponseEntity.ok("로그아웃 완료");
+	public ResponseEntity<String> logout() {
+	    return ResponseEntity.ok("로그아웃 되었습니다");
 	}
 	
 	
@@ -288,4 +295,62 @@ public class UserController {
 		return ResponseEntity.ok(Map.of("user_id", user_id));
 	}
 	
+	@GetMapping("/login/me")
+	public ResponseEntity<?> getMe(){
+		String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		
+		if (userId == null || "anonymousUser".equals(userId)) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+	    }
+		
+		System.out.println("🔍 userId = " + userId);
+	    User user = userService.getUser(userId);
+//	    log.info("grade_id: {}", user.getGrade_id());
+	    return ResponseEntity.ok(Map.of(
+	        "user_id", user.getUser_id(),
+	        "grade_id", user.getGrade_id(),
+	        "nickname", user.getNickname()
+	    ));
+	}
+	
+	
+	@GetMapping("/admin/user-list")
+	public ResponseEntity<PageResponseVO<UserListDTO>> userList(@ModelAttribute UserListDTO dto){
+		dto.applyFilterType();
+		PageResponseVO<UserListDTO> pageResponse = userService.userList(dto);
+        return ResponseEntity.ok(pageResponse);
+	}
+	
+	@GetMapping("/user-detail/{user_id}")
+	public ResponseEntity<User> userDetail(@PathVariable String user_id){
+		User user = userService.getUser(user_id);
+		
+		if (user == null) {
+	        return ResponseEntity.notFound().build(); // 404Add commentMore actions
+	    }
+
+	    return ResponseEntity.ok(user); // 200 + JSON 바디
+	}
+	
+	@PutMapping("/user-detail")
+	public ResponseEntity<String> updateUserDetail(@RequestBody User user) {
+	    boolean success = userService.updateUser(user);
+
+	    if (success) {
+	        return ResponseEntity.ok("수정 완료"); // 200 OK
+	    } else {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("수정 실패"); // 500
+	    }
+	}
+	
+	@PutMapping("/admin/user/secession/{user_id}")
+	public ResponseEntity<String> secessionUser(@PathVariable String user_id) {
+	    boolean success = userService.secessionUser(user_id);
+
+	    if (success) {
+	        return ResponseEntity.ok("수정 완료"); // 200 OK
+	    } else {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("수정 실패"); // 500
+	    }
+	}
 }

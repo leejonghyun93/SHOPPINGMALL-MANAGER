@@ -148,21 +148,6 @@ public class BroadCastController {
         return ResponseEntity.ok(result);
     }
     
-    // 스트림 키, 스트림 url, rtmp url 등 불러오기
-//    @GetMapping("/init")
-//    public ResponseEntity<Map<String, Object>> initBroadcastInfo() {
-//        String streamKey = UUID.randomUUID().toString();
-//        String rtmpUrl = "rtmp://192.168.4.206/stream/";
-//        String hlsUrl = "http://192.168.4.206:8090/live/" + streamKey + "_720p2628kbs/index.m3u8";
-//
-//        Map<String, Object> result = new HashMap<>();
-//        result.put("stream_key", streamKey);
-//        result.put("rtmp_url", rtmpUrl);
-//        result.put("stream_url", hlsUrl);
-//
-//        return ResponseEntity.ok(result);
-//    }
-    
     // 방송 정보 불러오기
     @GetMapping("/{broadcast_id}")
     public ResponseEntity<?> getBroadcastDetail(@PathVariable("broadcast_id") int broadcast_id) throws Exception {
@@ -337,26 +322,51 @@ public class BroadCastController {
         return ResponseEntity.ok().body(Map.of("result", "success"));
     } 
     
-    @PostMapping("/upload")
-    public ResponseEntity<?> uploadRecording(@RequestParam MultipartFile file,
-                @RequestParam("broadcast_id") int broadcastId) {
-        String saveDir = "C:/upload/recordings/"; // 받아온 영상을 저장할 경로
-        File dir = new File(saveDir); // 만들어진 경로를 파일 형태로 변환
-        if (!dir.exists()) dir.mkdirs(); // 해당 경로가 없을 경우 직접 생성
+    // 방송자의 녹화 파일(mp4 등)을 업로드받아 서버에 저장하고, 재생 가능한 URL을 DB에 저장하는 API
+    @PostMapping("/video/upload")
+    public ResponseEntity<?> upload(@RequestParam MultipartFile file,      // 클라이언트에서 업로드한 파일
+                                    @RequestParam int broadcast_id) {     			    // 어떤 방송의 영상인지 식별할 ID
 
-        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename(); // 파일명 임의 생성
-        String videoUrl = "/upload/recordings/" + filename; // db에 저장할 동영상 주소
+        // Spring 서버 내에 녹화 파일을 저장할 디렉토리 경로 (이 경로는 서버 로컬 디스크 기준)
+        String saveDir = "C:/videos/";
+
+        // 저장할 파일명: broadcast ID와 원본 파일명을 조합하여 고유하게 생성 (ex. broadcast_5_myvideo.mp4)
+        String filename = "broadcast_" + broadcast_id + "_" + file.getOriginalFilename();
 
         try {
-            file.transferTo(new File(saveDir + filename)); // 저장경로 + 파일명 합쳐서 파일로 변환
+        	
+        	// 저장 폴더가 없으면 생성
+            File dir = new File(saveDir);
+            if (!dir.exists()) {
+                boolean created = dir.mkdirs(); // 폴더 생성 (상위 경로까지 포함)
+                if (!created) {
+                    return ResponseEntity.status(500).body("❌ 저장 디렉토리 생성 실패");
+                }
+            }
+        	
+            // 파일 저장: 업로드된 파일을 지정된 경로에 실제로 저장
+            // 저장 위치: Spring Boot가 실행 중인 PC의 로컬 디스크 (예: C:/upload/videos/...)
+            file.transferTo(new File(saveDir + filename));
+
+            // 현재 Spring 서버의 IP 주소를 자동으로 추출 (ex. 192.168.0.101)
+            String serverIp = broadCastService.getLocalIp(); // 아래에 정의된 getLocalIp() 메서드 참고
+
+            // 사용자 브라우저에서 접근 가능한 영상 URL 생성
+            // ex. http://192.168.0.101:8080/video/broadcast_5_myvideo.mp4
+            String videoUrl = "http://" + serverIp + ":8080/video/" + filename;
+
+            // DB 업데이트: 해당 방송 ID에 대해 생성된 videoUrl을 저장
+            // → 이후 Vue에서 이 URL을 불러와서 <video>로 재생할 수 있음
+            broadCastService.updateVideoUrl(broadcast_id, videoUrl);
+
+            // 응답: 생성된 영상 URL을 클라이언트에 JSON으로 반환
+            return ResponseEntity.ok(Map.of("video_url", videoUrl));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 저장 실패");
+            // 파일 저장 중 에러 발생 시 500 에러 반환
+            return ResponseEntity.status(500).body("업로드 실패");
         }
-
-        //  여기서 DB에 video_url 저장
-        broadCastService.updateVideoUrl(broadcastId, videoUrl);
-
-        return ResponseEntity.ok(videoUrl);
     }
     
+    
+	 
 }
