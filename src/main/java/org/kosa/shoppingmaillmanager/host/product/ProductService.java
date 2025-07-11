@@ -6,10 +6,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.kosa.shoppingmaillmanager.host.product.dto.LowStockProductDto;
+import org.kosa.shoppingmaillmanager.host.product.dto.LowStockProductSummaryDto;
+import org.kosa.shoppingmaillmanager.host.product.dto.PopularProductDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductOptionDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductRequestDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductSearchCondition;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductSimpleDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductStatusDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductUpdateDto;
 import org.kosa.shoppingmaillmanager.host.product.entity.Product;
 import org.kosa.shoppingmaillmanager.host.product.entity.ProductOption;
@@ -186,5 +190,45 @@ public class ProductService {
 	            productDAO.insertProductOption(option);
 	        }
 	    }
+	}
+	
+	public LowStockProductSummaryDto getLowStockProducts(String userId) {
+	    // 1. hostId 조회
+	    String hostId = hostDAO.findHostIdByUserId(userId);
+	    if (hostId == null) {
+	        throw new IllegalArgumentException("호스트 정보를 찾을 수 없습니다.");
+	    }
+
+	    // 2. DAO로부터 데이터 조회
+	    List<LowStockProductDto> products = productDAO.findLowStockProducts(hostId);
+	    int totalCount = productDAO.countLowStockProducts(hostId);
+
+	    // 3. 응답 DTO 조립
+	    LowStockProductSummaryDto result = new LowStockProductSummaryDto();
+	    result.setProducts(products);
+	    result.setTotalCount(totalCount);
+	    return result;
+	}
+	
+	public List<PopularProductDto> getPopularProducts(String userId) {
+	    // 1. hostId 조회
+	    String hostId = hostDAO.findHostIdByUserId(userId);
+	    if (hostId == null) {
+	        throw new IllegalArgumentException("호스트 정보를 찾을 수 없습니다.");
+	    }
+
+	    // 2. 인기 상품 목록 조회 (판매량 기준 Top 5)
+	    return productDAO.findPopularProducts(hostId);
+	}
+
+	public ProductStatusDto getProductStatus(String userId) {
+	    // 1. hostId 조회
+	    String hostId = hostDAO.findHostIdByUserId(userId);
+	    if (hostId == null) {
+	        throw new IllegalArgumentException("호스트 정보를 찾을 수 없습니다.");
+	    }
+
+	    // 2. 상태별 상품 수 조회
+	    return productDAO.countProductStatus(hostId);
 	}
 }
