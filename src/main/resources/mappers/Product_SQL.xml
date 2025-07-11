@@ -280,4 +280,57 @@
 		FROM tb_product_options
 		WHERE product_id = #{productId}
 	</select>
+
+	<select id="findLowStockProducts"
+		resultType="org.kosa.shoppingmaillmanager.host.product.dto.LowStockProductDto">
+  <![CDATA[
+    SELECT product_id AS productId,
+           name,
+           stock
+    FROM tb_product
+    WHERE host_id = #{hostId}
+      AND stock <= 5
+    ORDER BY stock ASC
+    LIMIT 5
+  ]]>
+	</select>
+
+	<select id="countLowStockProducts" resultType="int">
+  <![CDATA[
+    SELECT COUNT(*)
+    FROM tb_product
+    WHERE host_id = #{hostId}
+      AND stock <= 5
+  ]]>
+	</select>
+	
+	<select id="findPopularProducts"
+        resultType="org.kosa.shoppingmaillmanager.host.product.dto.PopularProductDto">
+  <![CDATA[
+    SELECT 
+      p.product_id AS productId,
+      p.name,
+      p.main_image AS mainImage,
+      IFNULL((
+        SELECT SUM(oi.quantity)
+        FROM tb_order_item oi
+        WHERE oi.product_id = p.product_id
+      ), 0) AS productSalesCount
+    FROM tb_product p
+    WHERE p.host_id = #{hostId}
+      AND p.display_yn = 'Y'
+    ORDER BY productSalesCount DESC
+    LIMIT 5
+  ]]>
+</select>
+
+<select id="countProductStatus" resultType="org.kosa.shoppingmaillmanager.host.product.dto.ProductStatusDto">
+  SELECT
+    COUNT(CASE WHEN product_status = '판매중' THEN 1 END) AS onSale,
+    COUNT(CASE WHEN product_status = '판매중지' THEN 1 END) AS offSale,
+    COUNT(CASE WHEN product_status = '품절' THEN 1 END) AS outOfStock
+  FROM tb_product
+  WHERE host_id = #{hostId}
+</select>
+
 </mapper>

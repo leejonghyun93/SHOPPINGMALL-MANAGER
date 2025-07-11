@@ -1,11 +1,15 @@
 package org.kosa.shoppingmaillmanager.host.product;
 
 
+import java.util.List;
 import java.util.Map;
 
+import org.kosa.shoppingmaillmanager.host.product.dto.LowStockProductSummaryDto;
+import org.kosa.shoppingmaillmanager.host.product.dto.PopularProductDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductRequestDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductSearchCondition;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductSimpleDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductStatusDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductUpdateDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -144,6 +148,33 @@ public class ProductRestController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+    
+    @GetMapping("/dashboard/sold-out")
+    public ResponseEntity<LowStockProductSummaryDto> getLowStockProducts(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        log.info("📦 품절 임박 상품 요청 by userId: {}", userId);
+
+        LowStockProductSummaryDto result = productService.getLowStockProducts(userId);
+        return ResponseEntity.ok(result);
+    }
+    
+    @GetMapping("/dashboard/popular")
+    public ResponseEntity<List<PopularProductDto>> getPopularProducts(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        log.info("🔥 인기 상품 요청 by userId: {}", userId);
+
+        List<PopularProductDto> result = productService.getPopularProducts(userId);
+        return ResponseEntity.ok(result);
+    }
+    
+    @GetMapping("/dashboard/product-status")
+    public ResponseEntity<ProductStatusDto> getProductStatus(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        log.info("📦 상품 상태 요청 by userId: {}", userId);
+
+        ProductStatusDto result = productService.getProductStatus(userId);
+        return ResponseEntity.ok(result);
     }
 }
 

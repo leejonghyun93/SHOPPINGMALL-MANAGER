@@ -5,8 +5,11 @@ import java.util.Map;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.kosa.shoppingmaillmanager.host.product.dto.LowStockProductDto;
+import org.kosa.shoppingmaillmanager.host.product.dto.PopularProductDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductOptionDto;
 import org.kosa.shoppingmaillmanager.host.product.dto.ProductSimpleDTO;
+import org.kosa.shoppingmaillmanager.host.product.dto.ProductStatusDto;
 import org.kosa.shoppingmaillmanager.host.product.entity.Product;
 import org.kosa.shoppingmaillmanager.host.product.entity.ProductOption;
 
@@ -48,4 +51,14 @@ public interface ProductDAO {
 
     // ✅ 상품 수정 시 사용될 단순 조회 (권한 확인용)
     Product findProductById(Integer productId);
+    
+    // ✅ 품절 임박 상품 Top 5 조회
+    List<LowStockProductDto> findLowStockProducts(@Param("hostId") String hostId);
+
+    // ✅ 품절 임박 상품 전체 건수
+    int countLowStockProducts(@Param("hostId") String hostId);
+    
+    List<PopularProductDto> findPopularProducts(@Param("hostId") String hostId);
+    
+    ProductStatusDto countProductStatus(@Param("hostId") String hostId);
 }
