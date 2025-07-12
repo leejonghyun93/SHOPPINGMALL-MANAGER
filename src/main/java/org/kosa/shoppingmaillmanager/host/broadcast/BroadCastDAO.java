@@ -17,6 +17,7 @@ public interface BroadCastDAO {
     public List<BroadCastViewer> findViewersByBroadcastId(@Param("broadcast_id") int broadcastId);
 	public BroadCast findById(int broadcast_id);
 	public void updateStatus(BroadCast broadCast);
+	public void updateBroadcastCategoryByTopProductCategory(int broadcastId);
 	
 	public void insertViewer(BroadCastViewer viewer);
 	public void updateLeftTime(@Param("user_id") String user_id, @Param("broadcast_id") int broadcast_id);

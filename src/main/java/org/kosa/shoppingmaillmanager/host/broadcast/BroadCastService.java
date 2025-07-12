@@ -91,7 +91,7 @@ public class BroadCastService {
 		return broadCastDAO.findById(broadcast_id);
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public BroadCast getBroadcastDetails(int broadcast_id) {
 		BroadCast broadcast = broadCastDAO.findBroadcastById(broadcast_id);
 		if (broadcast == null) {
@@ -100,6 +100,7 @@ public class BroadCastService {
 
 		List<BroadCastProduct> products = broadCastDAO.findProductsByBroadcastId(broadcast_id);
 		List<BroadCastViewer> viewers = broadCastDAO.findViewersByBroadcastId(broadcast_id);
+		broadCastDAO.updateBroadcastCategoryByTopProductCategory(broadcast_id);
 
 		broadcast.setProductList(products);
 		broadcast.setViewerList(viewers);

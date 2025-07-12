@@ -23,7 +23,7 @@ public class BroadCast {
 	private String scheduled_end_time;      // 예정 종료 시간
 	private String actual_start_time;       // 실제 시작 시간
 	private String actual_end_time;         // 실제 종료 시간
-	private boolean is_public;              // 공개 여부
+	private Boolean is_public;              // 공개 여부
 	private int max_viewers;                // 최대 시청자 수 (0은 무제한)
 	private int current_viewers;            // 현재 시청자 수
 	private int total_viewers;              // 총 시청자 수

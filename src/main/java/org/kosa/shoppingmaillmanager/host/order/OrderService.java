@@ -19,13 +19,14 @@ public class OrderService {
 	private final OrderDAO orderDAO;
 
 	public PageResponseVO<OrderListDTO> list(
-			String searchColumn, String searchValue, int pageNo, int size, String startDate, String endDate, List<String> order_status, 
-			List<String> payment_method, String recipient_name, String recipient_phone, 
+			Integer host_id, String searchColumn, String searchValue, int pageNo, int size, String startDate, String endDate, 
+			List<String> order_status, List<String> payment_method, String recipient_name, String recipient_phone, 
 			String order_address_detail, String user_name, String user_phone, String user_email, String sortOption) {
 		
 		int start = (pageNo - 1) * size;
 		
 		Map<String, Object> map = new HashMap<>();
+		map.put("host_id", host_id);
 		map.put("start", start);
 		map.put("size", size);
 		map.put("searchColumn", searchColumn);
