@@ -153,7 +153,7 @@ public class BroadCastController {
     public ResponseEntity<?> getBroadcastDetail(@PathVariable("broadcast_id") int broadcast_id) throws Exception {
     	// 방송 정보 불러오기
     	BroadCast b = broadCastService.getBroadcastDetails(broadcast_id);
-
+    	
         // stream_key는 등록 시 이미 생성되어 있으므로 여기선 복호화만 하면 됨
         String streamKey = AESUtil.decrypt(b.getStream_key());
         
@@ -303,6 +303,8 @@ public class BroadCastController {
     public ResponseEntity<PageResponseVO<BroadCastListDTO>> broadcastList(
     		@ModelAttribute BroadCastListDTO dto){
     	
+    	dto.setBroadcaster_id((String) SecurityContextHolder.getContext().getAuthentication().getPrincipal()); 
+	
     	PageResponseVO<BroadCastListDTO> pageResponse = broadCastService.list(dto);
     	return ResponseEntity.ok(pageResponse);
     			

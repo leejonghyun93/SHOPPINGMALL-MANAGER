@@ -71,26 +71,34 @@
 	<select id="getPagedOrderIds" parameterType="map" resultType="string">
 	  SELECT DISTINCT o.order_id
 	  FROM tb_order o
+	  JOIN tb_order_item i ON o.order_id = i.order_id
+	  JOIN tb_product p ON i.product_id = p.product_id
 	  LEFT JOIN tb_member m ON o.user_id = m.user_id
-	  LEFT JOIN tb_order_item i ON o.order_id = i.order_id
 	  <where>
-	    <!-- 조인된 테이블 조건 사용 가능 -->
+	    <!-- 판매자 본인의 상품에 대한 주문만 -->
+	    <if test="host_id != null and host_id != ''">
+	      AND p.host_id = #{host_id}
+	    </if>
+	
+	    <!-- 검색어 관련 필터 -->
 	    <if test="searchValue != null and searchValue != ''">
 	      <choose>
 	        <when test="searchColumn == null or searchColumn == ''">
 	          (
 	            o.order_id LIKE CONCAT('%', #{searchValue}, '%')
-	            OR i.name LIKE CONCAT('%', #{searchValue}, '%')
+	            OR p.name LIKE CONCAT('%', #{searchValue}, '%')
 	          )
 	        </when>
 	        <when test="searchColumn eq 'order_id'">
 	          o.order_id LIKE CONCAT('%', #{searchValue}, '%')
 	        </when>
 	        <when test="searchColumn eq 'product_name'">
-	          i.name LIKE CONCAT('%', #{searchValue}, '%')
+	          p.name LIKE CONCAT('%', #{searchValue}, '%')
 	        </when>
 	      </choose>
 	    </if>
+	
+	    <!-- 날짜 필터 -->
 	    <if test="startDate != null and startDate != ''">
 	      AND DATE(o.order_date) &gt;= #{startDate}
 	    </if>
@@ -98,6 +106,7 @@
 	      AND DATE(o.order_date) &lt;= #{endDate}
 	    </if>
 	
+	    <!-- 상태, 결제수단 필터 -->
 	    <if test="order_status != null and order_status.size() > 0">
 	      AND o.order_status IN
 	      <foreach collection="order_status" item="status" open="(" separator="," close=")">
@@ -117,6 +126,8 @@
 	        </foreach>
 	      )
 	    </if>
+	
+	    <!-- 배송지 및 사용자 정보 -->
 	    <if test="recipient_name != null and recipient_name != ''">
 	      AND o.recipient_name LIKE CONCAT('%', #{recipient_name}, '%')
 	    </if>
@@ -129,7 +140,7 @@
 	    <if test="user_name != null and user_name != ''">
 	      AND m.name LIKE CONCAT('%', #{user_name}, '%')
 	    </if>
-	   	<if test="user_phone != null and user_phone != ''">
+	    <if test="user_phone != null and user_phone != ''">
 	      AND m.phone LIKE CONCAT('%', #{user_phone}, '%')
 	    </if>
 	    <if test="user_email != null and user_email != ''">
@@ -159,7 +170,7 @@
 	</select>
 	
 	
-	<select id="list" resultMap="orderListMap">
+	<!-- <select id="list" resultMap="orderListMap">
 	  SELECT 
 	    o.order_id, 
 	    o.user_id, 
@@ -174,87 +185,129 @@
 	    #{id}
 	  </foreach>
 	  ORDER BY o.order_date DESC
+	</select> -->
+	
+	<select id="list" resultMap="orderListMap">
+	  SELECT DISTINCT
+	    o.order_id,
+	    o.user_id,
+	    o.order_date,
+	    o.order_status,
+	    o.total_price,
+	    m.name AS user_name
+	  FROM tb_order o
+	  JOIN tb_order_item oi ON o.order_id = oi.order_id
+	  JOIN tb_product p ON oi.product_id = p.product_id
+	  LEFT JOIN tb_member m ON o.user_id = m.user_id
+	  WHERE p.host_id = #{host_id}
+	  <if test="orderIdList != null and orderIdList.size() > 0">
+	    AND o.order_id IN
+	    <foreach collection="orderIdList" item="id" open="(" separator="," close=")">
+	      #{id}
+	    </foreach>
+	  </if>
+	  ORDER BY o.order_date DESC
 	</select>
 		
 	<select id="getTotalCount" resultType="int">
-	    SELECT count(distinct o.order_id)
-	    FROM 
-	    tb_order o 
-	    LEFT JOIN tb_member m ON o.user_id = m.user_id 
-	    LEFT JOIN tb_order_item i ON o.order_id = i.order_id
-	    <where>
-	   	<if test="searchValue != null and searchValue != ''">
-	    	<choose>
-	    		<when test="searchColumn == null or searchColumn == ''">
-			        (
-			          o.order_id LIKE CONCAT('%', #{searchValue}, '%')
-			          OR i.name LIKE CONCAT('%', #{searchValue}, '%')
-			        )
-			     </when>
-		    	<when test="searchColumn eq 'order_id' ">
-		    		o.order_id LIKE concat(concat('%', #{searchValue}), '%')
-		    	</when>
-				<when test="searchColumn eq 'product_name' ">
-		   			i.name LIKE concat(concat('%', #{searchValue}), '%')
-		    	</when>
-	   		</choose>
-		</if>
-	    	<if test="startDate != null and startDate != ''">
-		      AND date(o.order_date) &gt;= #{startDate}
-		    </if>
-		    <if test="endDate != null and endDate != ''">
-		      AND date(o.order_date) &lt;= #{endDate}
-		    </if>
-		    <if test="order_status != null and order_status.size() > 0">
-			  AND o.order_status IN
-			  <foreach collection="order_status" item="order_status" open="(" separator="," close=")">
-			    #{order_status}
-			  </foreach>
-			</if>
-			
-			<if test="payment_method != null and payment_method.size() > 0">
-			   AND (
-			    <foreach collection="payment_method" item="pm" separator=" OR ">
-			      <choose>
-			        <when test="pm eq '카드결제'">
-			          o.payment_method = 'CARD'
-			        </when>
-			        <when test="pm eq '카카오페이'">
-			          o.payment_method = 'KAKAOPAY'
-			        </when>
-			        <when test="pm eq '휴대폰결제'">
-			          o.payment_method = 'MOBILE'
-			        </when>
-			        <when test="pm eq '포인트결제'">
-			          o.payment_method = 'ACCOUNT_TRANSFER'
-			        </when>
-			        <otherwise>
-			          1=1  <!-- 예외 방지용, 없어도 됨 -->
-			        </otherwise>
-			      </choose>
-			    </foreach>
-			  )
-			</if>
-		    <if test="recipient_name != null and recipient_name != ''">
-		      AND o.recipient_name LIKE CONCAT('%', #{recipient_name}, '%')
-		    </if>
-		    <if test="recipient_phone != null and recipient_phone != ''">
-		      AND o.recipient_phone LIKE CONCAT('%', #{recipient_phone}, '%')
-		    </if>
-		    <if test="order_address_detail != null and order_address_detail != ''">
-		      AND o.order_address_detail LIKE CONCAT('%', #{order_address_detail}, '%')
-		    </if>
-		    <if test="user_name != null and user_name != ''">
-		      AND o.name LIKE CONCAT('%', #{user_name}, '%')
-		    </if>
-		    <if test="user_phone != null and user_phone != ''">
-		      AND o.phone LIKE CONCAT('%', #{user_phone}, '%')
-		    </if>
-		    <if test="user_email != null and user_email != ''">
-		      AND o.email LIKE CONCAT('%', #{user_email}, '%')
-		    </if>
-	    </where>
-	    
+	  SELECT count(distinct o.order_id)
+	  FROM tb_order o
+	  JOIN tb_order_item i ON o.order_id = i.order_id
+	  JOIN tb_product p ON i.product_id = p.product_id
+	  LEFT JOIN tb_member m ON o.user_id = m.user_id
+	  <where>
+	    <!-- 판매자 본인의 상품에 대한 주문만 -->
+	    <if test="host_id != null and host_id != ''">
+	      AND p.host_id = #{host_id}
+	    </if>
+	
+	    <!-- 검색어 관련 필터 -->
+	    <if test="searchValue != null and searchValue != ''">
+	      <choose>
+	        <when test="searchColumn == null or searchColumn == ''">
+	          (
+	            o.order_id LIKE CONCAT('%', #{searchValue}, '%')
+	            OR p.name LIKE CONCAT('%', #{searchValue}, '%')
+	          )
+	        </when>
+	        <when test="searchColumn eq 'order_id'">
+	          o.order_id LIKE CONCAT('%', #{searchValue}, '%')
+	        </when>
+	        <when test="searchColumn eq 'product_name'">
+	          p.name LIKE CONCAT('%', #{searchValue}, '%')
+	        </when>
+	      </choose>
+	    </if>
+	
+	    <!-- 날짜 필터 -->
+	    <if test="startDate != null and startDate != ''">
+	      AND DATE(o.order_date) &gt;= #{startDate}
+	    </if>
+	    <if test="endDate != null and endDate != ''">
+	      AND DATE(o.order_date) &lt;= #{endDate}
+	    </if>
+	
+	    <!-- 상태, 결제수단 필터 -->
+	    <if test="order_status != null and order_status.size() > 0">
+	      AND o.order_status IN
+	      <foreach collection="order_status" item="status" open="(" separator="," close=")">
+	        #{status}
+	      </foreach>
+	    </if>
+	    <if test="payment_method != null and payment_method.size() > 0">
+	      AND (
+	        <foreach collection="payment_method" item="pm" separator=" OR ">
+	          <choose>
+	            <when test="pm eq '카드결제'">o.payment_method = 'CARD'</when>
+	            <when test="pm eq '카카오페이'">o.payment_method = 'KAKAOPAY'</when>
+	            <when test="pm eq '휴대폰결제'">o.payment_method = 'MOBILE'</when>
+	            <when test="pm eq '포인트결제'">o.payment_method = 'ACCOUNT_TRANSFER'</when>
+	            <otherwise>1=1</otherwise>
+	          </choose>
+	        </foreach>
+	      )
+	    </if>
+	
+	    <!-- 배송지 및 사용자 정보 -->
+	    <if test="recipient_name != null and recipient_name != ''">
+	      AND o.recipient_name LIKE CONCAT('%', #{recipient_name}, '%')
+	    </if>
+	    <if test="recipient_phone != null and recipient_phone != ''">
+	      AND o.recipient_phone LIKE CONCAT('%', #{recipient_phone}, '%')
+	    </if>
+	    <if test="order_address_detail != null and order_address_detail != ''">
+	      AND o.order_address_detail LIKE CONCAT('%', #{order_address_detail}, '%')
+	    </if>
+	    <if test="user_name != null and user_name != ''">
+	      AND m.name LIKE CONCAT('%', #{user_name}, '%')
+	    </if>
+	    <if test="user_phone != null and user_phone != ''">
+	      AND m.phone LIKE CONCAT('%', #{user_phone}, '%')
+	    </if>
+	    <if test="user_email != null and user_email != ''">
+	      AND m.email LIKE CONCAT('%', #{user_email}, '%')
+	    </if>
+	  </where>
+	
+	  <choose>
+	    <when test="sortOption == 'order_date_desc'">
+	      ORDER BY o.order_date DESC
+	    </when>
+	    <when test="sortOption == 'order_date_asc'">
+	      ORDER BY o.order_date ASC
+	    </when>
+	    <when test="sortOption == 'total_price_desc'">
+	      ORDER BY o.total_price DESC
+	    </when>
+	    <when test="sortOption == 'total_price_asc'">
+	      ORDER BY o.total_price ASC
+	    </when>
+	    <otherwise>
+	      ORDER BY o.order_date DESC
+	    </otherwise>
+	  </choose>
+	
+	  LIMIT #{size} OFFSET #{start}
 	</select>
 	
 	<select id="getOrder" resultMap="orderDetailMap">

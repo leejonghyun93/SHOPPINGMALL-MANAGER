@@ -25,4 +25,5 @@ public interface UserDAO {
 	public int updateUser(User user);
 	public int secessionUser(String user_id);
 	public void updateHost(User user);
+	public Integer findByHostId(@Param("user_id") String loginUserId);
 }

@@ -188,7 +188,8 @@
 	        bp.product_id,
 	        p.name,
 	        p.price,
-	        p.main_image
+	        p.main_image,
+	        p.category_id
 	    FROM tb_broadcast_products bp
 	    JOIN tb_product p ON bp.product_id = p.product_id
 	    WHERE bp.broadcast_id = #{broadcast_id}
@@ -227,7 +228,9 @@
 	
 	<update id="updateStatus">
 	    UPDATE tb_live_broadcasts
-	    SET broadcast_status = #{broadcast_status}
+	    SET 
+	    broadcast_status = #{broadcast_status},
+	    is_public = #{is_public}
 	    <if test="actual_start_time != null">
 	      , actual_start_time = #{actual_start_time}
 	    </if>
@@ -322,5 +325,22 @@
 		UPDATE tb_live_broadcasts
 		SET stream_url = #{stream_url}
 		WHERE broadcast_id = #{broadcast_id}
+	</update>
+	
+	
+	<update id="updateBroadcastCategoryByTopProductCategory">
+	    UPDATE tb_live_broadcasts
+	    SET category_id = (
+	        SELECT category_id FROM (
+	            SELECT p.category_id, COUNT(*) AS cnt
+	            FROM tb_broadcast_products bp
+	            JOIN tb_product p ON bp.product_id = p.product_id
+	            WHERE bp.broadcast_id = #{broadcast_id}
+	            GROUP BY p.category_id
+	            ORDER BY cnt DESC
+	            LIMIT 1
+	        ) AS top_category
+	    )
+	    WHERE broadcast_id = #{broadcast_id}
 	</update>
 </mapper>

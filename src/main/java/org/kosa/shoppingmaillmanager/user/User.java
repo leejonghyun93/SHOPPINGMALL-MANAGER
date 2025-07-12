@@ -44,6 +44,7 @@ public class User {
     private String nickname;		// 닉네임
 
     // 아래는 호스트 테이블의 컬럼
+    private int host_id;				// 호스트 아이디
     private String business_no;     // 사업자 등록 번호
     private String bank_name;       // 은행명
     private String account_no;      // 계좌번호

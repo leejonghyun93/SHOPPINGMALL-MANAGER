@@ -3,8 +3,11 @@ package org.kosa.shoppingmaillmanager.host.order;
 import java.util.List;
 
 import org.kosa.shoppingmaillmanager.page.PageResponseVO;
+import org.kosa.shoppingmaillmanager.user.User;
+import org.kosa.shoppingmaillmanager.user.UserDAO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/order")
 public class OrderController {
 	private final OrderService orderService;
+	private final UserDAO userDAO;
 	
 	@GetMapping("/")
 	public ResponseEntity<PageResponseVO<OrderListDTO>> orderList(
@@ -42,8 +46,11 @@ public class OrderController {
     		@RequestParam(required = false) String user_email,
     		@RequestParam(required = false) String sortOption){
 		
+		String loginUserId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		Integer host_id = userDAO.findByHostId(loginUserId);
+		
 		PageResponseVO<OrderListDTO> pageResponse = orderService.list(
-				searchColumn, searchValue, pageNo, size, startDate, endDate, order_status,
+				host_id, searchColumn, searchValue, pageNo, size, startDate, endDate, order_status,
 				payment_method, recipient_name, recipient_phone, order_address_detail, 
 				user_name, user_phone, user_email, sortOption);
         return ResponseEntity.ok(pageResponse);

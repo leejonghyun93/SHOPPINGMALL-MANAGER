@@ -282,7 +282,7 @@
 	        channel_name = #{channel_name},
 	        intro = #{intro},
 	        approved_yn = #{approved_yn}
-	  	WHERE user_id = #{user_id};
+	  	WHERE user_id = #{user_id}
 	</update>
 	
 	<update id="secessionUser">
@@ -291,4 +291,11 @@
 		secession_date = NOW()
 		WHERE user_id = #{user_id}
 	</update>
+	
+	<select id="findByHostId" resultType="int">
+		select h.host_id FROM 
+		tb_host h JOIN tb_member m 
+		ON h.user_id = m.user_id
+		where m.user_id = #{user_id}
+	</select>
 </mapper>
