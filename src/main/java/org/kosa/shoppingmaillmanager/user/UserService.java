@@ -175,7 +175,18 @@ public class UserService {
 	}
 
 
-	public boolean secessionUser(String user_id) {
-		return userDAO.secessionUser(user_id) > 0;
+	public boolean secessionUser(String user_id, String secession_yn) {
+		return userDAO.secessionUser(user_id, secession_yn) > 0;
 	}
+
+	public int setBlacklistStatus(List<String> userIds, String blacklisted) {
+	    return userDAO.updateBlacklistStatus(userIds, blacklisted);
+	}
+
+
+	public int setUnlockStatus(List<String> userIds, String status) {
+		return userDAO.updateUnlockStatus(userIds, status);
+	}
+	
+	
 }

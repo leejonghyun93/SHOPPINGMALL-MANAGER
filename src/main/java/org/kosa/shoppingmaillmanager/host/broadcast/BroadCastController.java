@@ -2,10 +2,14 @@ package org.kosa.shoppingmaillmanager.host.broadcast;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -171,124 +175,220 @@ public class BroadCastController {
         
         return ResponseEntity.ok(result);
     }
+    
+    
+    /**
+     * 클라이언트 요청에서 broadcast_id 추출 후,
+     * 현재 로그인한 사용자의 방송인지 검증하는 메서드
+     *
+     * @param req 클라이언트로부터 받은 요청 바디(Map 형태)
+     * @return BroadCast 객체 (유효하지 않으면 null)
+     */
+    public BroadCast validateAndGetBroadcast(Map<String, Object> req) {
+        try {
+            // 1. broadcast_id 파싱
+            int broadcast_id = Integer.parseInt(req.get("broadcast_id").toString());
+
+            // 2. 인증 정보 가져오기
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+            // 3. 인증되지 않았거나, 사용자 정보가 없을 경우 null 반환
+            if (auth == null || !auth.isAuthenticated()) return null;
+
+            // 4. 현재 로그인한 사용자 ID 추출 (JWT 인증 기준)
+            String user_id = (String) auth.getPrincipal();
+
+            // 5. 방송 ID로 방송 정보 조회
+            BroadCast broadcast = broadCastService.findById(broadcast_id);
+
+            // 6. 방송이 없거나, 현재 사용자가 방송 등록자가 아닌 경우 null 반환
+            if (broadcast == null || !broadcast.getBroadcaster_id().equals(user_id)) {
+                return null;
+            }
+
+            // 7. 모든 조건 통과 → 방송 정보 반환
+            return broadcast;
+
+        } catch (Exception e) {
+            // 파싱 오류 등 예외 발생 시 null 반환
+            return null;
+        }
+    }
  
     
-    // 방송 시작 API
+    /**
+     * 방송 시작 API
+     *
+     * @param req 방송 ID를 포함한 요청 데이터 (JSON Body)
+     * @return 방송 시작 성공/실패 응답
+     */
     @PostMapping("/start")
     public ResponseEntity<?> startBroadcast(@RequestBody Map<String, Object> req) {
-        
-    	// 클라이언트에서 넘어온 방송 ID 추출
-    	 int broadcast_id = Integer.parseInt(req.get("broadcast_id").toString());
-    	
-    	// 인증 객체 수동으로 가져오기
-    	Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    	
-    	// 인증 정보 없거나 인증 안 된 경우
-        if (auth == null || !auth.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                "status", "error",
-                "message", "인증되지 않은 사용자입니다."
-            ));
-        }
-    	
-    	// 현재 로그인한 사용자의 ID 추출 (JWT 인증 기준)
-        String user_id = (String) auth.getPrincipal();
 
-        // 방송 ID로 방송 정보를 DB에서 조회
-        BroadCast broadcast = broadCastService.findById(broadcast_id);
+        // 1. 방송 유효성 및 권한 체크
+        BroadCast broadcast = validateAndGetBroadcast(req);
 
-        System.out.println("user_id : " + user_id);
-        // 방송이 존재하지 않거나, 해당 방송의 등록자가 현재 로그인한 사용자와 다를 경우 → 권한 없음
-        if (broadcast == null || !broadcast.getBroadcaster_id().equals(user_id)) {
+        // 2. 유효하지 않으면 403 응답
+        if (broadcast == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                 "status", "error",
-                "message", "권한 없음 또는 방송 없음"
+                "message", "방송이 존재하지 않거나 권한이 없습니다."
             ));
         }
 
         try {
-        	// OBS에 방송 시작 명령 전송
-        	broadCastService.startStreaming(broadcast_id);
-        	log.info("🚀 OBS 스트리밍 시작 요청 전송");
+            // 3. 방송 ID로 방송 시작 (OBS로 전송하는 로직)
+            broadCastService.startStreaming(broadcast.getBroadcast_id());
+
+            log.info("🚀 OBS 스트리밍 시작 요청 전송");
         	
         	// 방송 상태를 START로 변경
             broadcast.setBroadcast_status("start");
             
             // 변경된 방송 정보를 DB에 저장
             broadCastService.updateStatus(broadcast);
-
-            // 성공 응답 반환 (Stream_url 포함)
+            
+            // 4. 성공 응답 반환
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "stream_url", broadcast.getStream_url()
             ));
+
         } catch (Exception e) {
-        	// 예외 발생 시 에러 응답 변환
-        	return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
+            // 5. 내부 오류 발생 시 500 응답
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "error",
+                "message", e.getMessage()
             ));
         }
     }
     
     
     
-    // 방송 중지 API
+    /**
+     * 방송 중지 API
+     *
+     * @param req 방송 ID를 포함한 요청 데이터 (JSON Body)
+     * @return 방송 중지 성공/실패 응답
+     */
     @PostMapping("/stop")
     public ResponseEntity<?> stopBroadcast(@RequestBody Map<String, Object> req) {
-        
-    	// 클라이언트에서 넘어온 방송 ID 추출
-    	int broadcast_id = Integer.valueOf(req.get("broadcast_id").toString());
-    	
-    	// 인증 객체 수동으로 가져오기
-    	Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    	
-    	// 인증 정보 없거나 인증 안 된 경우
-        if (auth == null || !auth.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                "status", "error",
-                "message", "인증되지 않은 사용자입니다."
-            ));
-        }
-    	
-    	// 현재 로그인한 사용자의 ID 추출 (JWT 인증 기준)
-        String user_id = (String) auth.getPrincipal();
 
-        // 방송 ID로 방송 정보를 DB에서 조회
-        BroadCast broadcast = broadCastService.findById(broadcast_id);
+        // 1. 방송 유효성 및 권한 체크
+        BroadCast broadcast = validateAndGetBroadcast(req);
 
-        System.out.println("user_id : " + user_id);
-        // 방송이 존재하지 않거나, 해당 방송의 등록자가 현재 로그인한 사용자와 다를 경우 → 권한 없음
-        if (broadcast == null || !broadcast.getBroadcaster_id().equals(user_id)) {
+        // 2. 유효하지 않으면 403 응답
+        if (broadcast == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                 "status", "error",
-                "message", "권한 없음 또는 방송 없음"
+                "message", "방송이 존재하지 않거나 권한이 없습니다."
             ));
         }
 
         try {
-        	// OBS에 방송 시작 명령 전송
-        	broadCastService.stopStreaming(broadcast_id);
+            // 3. 방송 ID로 방송 중지 (OBS로 전송하는 로직)
+            broadCastService.stopStreaming(broadcast.getBroadcast_id());
+
+            log.info("🚀 OBS 스트리밍 중지 요청 전송");
         	
-        	// 방송 상태를 STOP로 변경
+        	// 방송 상태를 START로 변경
             broadcast.setBroadcast_status("stop");
             
             // 변경된 방송 정보를 DB에 저장
             broadCastService.updateStatus(broadcast);
-
-//            String recordedFilePath = obsControlService.stopRecordingAndGetFilePath(); // OBS → 녹화 종료 + 파일 경로 받음
-//            broadCastService.uploadToSpringServer(broadcast_id, recordedFilePath); // Spring upload API로 업로드 요청 보내기
             
-            // 성공 응답 반환 (Stream_url 포함)
+            // 4. 성공 응답 반환
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "stream_url", broadcast.getStream_url()
             ));
+
         } catch (Exception e) {
-        	// 예외 발생 시 에러 응답 변환
-        	return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
+            // 5. 내부 오류 발생 시 500 응답
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "error",
+                "message", e.getMessage()
+            ));
+        }
+    }
+    
+    
+    /**
+     * 녹화 및 송출 시작 API
+     *
+     * @param req 방송 ID를 포함한 요청 데이터 (JSON Body)
+     * @return 녹화 시작 성공/실패 응답
+     */
+    @PostMapping("/live")
+    public ResponseEntity<?> recordStartBroadcast(@RequestBody Map<String, Object> req) {
+
+        // 1. 방송 유효성 및 권한 체크
+        BroadCast broadcast = validateAndGetBroadcast(req);
+
+        // 2. 유효하지 않으면 403 응답
+        if (broadcast == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "status", "error",
+                "message", "방송이 존재하지 않거나 권한이 없습니다."
+            ));
+        }
+
+        try {
+            // 3. 방송 ID로 녹화 시작 (OBS로 전송하는 로직)
+            broadCastService.startRecording(broadcast.getBroadcast_id());
+
+            // 4. 성공 응답 반환
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "stream_url", broadcast.getStream_url()
+            ));
+
+        } catch (Exception e) {
+            // 5. 내부 오류 발생 시 500 응답
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "error",
+                "message", e.getMessage()
+            ));
+        }
+    }
+    
+    
+    
+    /**
+     * 녹화 및 송출 중지 API
+     *
+     * @param req 방송 ID를 포함한 요청 데이터 (JSON Body)
+     * @return 녹화 중지 성공/실패 응답
+     */
+    @PostMapping("/ended")
+    public ResponseEntity<?> recordStopBroadcast(@RequestBody Map<String, Object> req) {
+
+        // 1. 방송 유효성 및 권한 체크
+        BroadCast broadcast = validateAndGetBroadcast(req);
+
+        // 2. 유효하지 않으면 403 응답
+        if (broadcast == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "status", "error",
+                "message", "방송이 존재하지 않거나 권한이 없습니다."
+            ));
+        }
+
+        try {
+            // 3. 방송 ID로 녹화 중지 (OBS로 전송하는 로직)
+            broadCastService.stopRecording(broadcast.getBroadcast_id());
+
+            // 4. 성공 응답 반환
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "stream_url", broadcast.getStream_url()
+            ));
+
+        } catch (Exception e) {
+            // 5. 내부 오류 발생 시 500 응답
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "status", "error",
+                "message", e.getMessage()
             ));
         }
     }
@@ -368,6 +468,34 @@ public class BroadCastController {
             return ResponseEntity.status(500).body("업로드 실패");
         }
     }
+    
+    	// 현재 서버의 IPv4 주소를 자동으로 추출하는 메서드
+ 		// Spring Boot가 실행 중인 PC의 실제 네트워크 IP (ex. 192.168.0.101)를 반환함
+ 		private String getLocalIp() {
+ 			try {
+ 				// 현재 시스템에 존재하는 모든 네트워크 인터페이스(유선랜, 와이파이, 가상 어댑터 등)를 순회
+ 			   for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+ 			             
+ 			   // 해당 인터페이스에 연결된 모든 IP 주소를 순회 (IPv4, IPv6 포함)
+ 			   for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+ 			
+ 			       // 조건 1: 루프백 주소는 제외 (예: 127.0.0.1 → 자기 자신용 주소는 사용 X)
+ 			       // 조건 2: IPv4 주소만 추출 (IPv6 주소는 제외)
+ 			       if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
+ 			
+ 			                     // 조건을 만족하는 첫 번째 IPv4 주소를 반환 (예: 192.168.0.101)
+ 			                     return addr.getHostAddress();
+ 			                 }
+ 			             }
+ 			        }
+ 			} catch (Exception e) {
+ 			         // 예외 발생 시 로그 출력 (예: 인터페이스 조회 실패 등)
+ 			         e.printStackTrace();
+ 			}
+ 			
+ 			// 조건에 맞는 IP를 찾지 못하거나 예외 발생 시 fallback 값으로 "localhost" 반환
+ 			return "localhost";
+ 		}
     
     
 	 

@@ -2,6 +2,7 @@ package org.kosa.shoppingmaillmanager.user;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.kosa.shoppingmaillmanager.page.PageResponseVO;
@@ -344,13 +345,41 @@ public class UserController {
 	}
 	
 	@PutMapping("/admin/user/secession/{user_id}")
-	public ResponseEntity<String> secessionUser(@PathVariable String user_id) {
-	    boolean success = userService.secessionUser(user_id);
+	public ResponseEntity<String> secessionUser(
+			@PathVariable String user_id, 
+			@RequestParam String secession_yn) {
+	    boolean success = userService.secessionUser(user_id ,secession_yn);
 
 	    if (success) {
 	        return ResponseEntity.ok("수정 완료"); // 200 OK
 	    } else {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("수정 실패"); // 500
 	    }
+	}
+	
+	@PutMapping("/admin/users/blacklist")
+	public ResponseEntity<?> setBlacklistStatus(@RequestBody Map<String, Object> body) {
+	    List<String> userIds = (List<String>) body.get("userIds");
+	    String blacklisted = (String) body.get("blacklisted");
+
+	    if (userIds == null || userIds.isEmpty() || blacklisted == null) {
+	        return ResponseEntity.badRequest().body("필수 정보 누락");
+	    }
+
+	    int updated = userService.setBlacklistStatus(userIds, blacklisted);
+	    return ResponseEntity.ok(Map.of("message", updated + "명 처리 완료", "status", blacklisted));
+	}
+	
+	@PutMapping("/admin/users/unlock")
+	public ResponseEntity<?> setUnlockStatus(@RequestBody Map<String, Object> body) {
+	    List<String> userIds = (List<String>) body.get("userIds");
+	    String status = (String) body.get("status");
+
+	    if (userIds == null || userIds.isEmpty() || status == null) {
+	        return ResponseEntity.badRequest().body("필수 정보 누락");
+	    }
+
+	    int updated = userService.setUnlockStatus(userIds, status);
+	    return ResponseEntity.ok(Map.of("message", updated + "명 처리 완료", "status", status));
 	}
 }
