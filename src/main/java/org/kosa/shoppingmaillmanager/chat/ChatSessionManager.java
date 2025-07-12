@@ -1,6 +1,5 @@
 package org.kosa.shoppingmaillmanager.chat;
 
-import java.lang.invoke.StringConcatFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.RedisTemplate;
