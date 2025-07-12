@@ -76,172 +76,169 @@
 	<select id="getUserList" resultType="org.kosa.shoppingmaillmanager.user.UserListDTO">
 		SELECT *
 		FROM tb_member
-		<where>
-		<choose>
-		  <when test="filterType eq 'locked'">
-		  	AND secession_yn = 'N'
-		    AND blacklisted = 'Y'
-		    OR status = 'N'
-		  </when>
-		  <when test="filterType eq 'widthdrawn'">
-		    AND secession_yn = 'Y'
-		  </when>
-		  <otherwise>
-		    <if test="excludeGrades != null">
-		      grade_id NOT IN
-		      <foreach item="grade" collection="excludeGrades" open="(" separator="," close=")">
-		        #{grade}
-		      </foreach>
-		    </if>
-		    <if test="grade_id != null and grade_id != ''">
-		      AND grade_id = #{grade_id}
-		    </if>
-		    <if test="blacklisted != null">
-		      AND blacklisted = #{blacklisted}
-		    </if>
-		    <if test="status != null">
-		      AND status = #{status}
-		    </if>
-		    <if test="secession_yn != null">
-		      AND secession_yn = #{secession_yn}
-		    </if>
-		  </otherwise>
-		</choose>
-		  
-			<if test="searchValue != null and searchValue !=''">
-				<choose>
-					<when test="searchColumn == null or searchColumn == ''">
-					AND (
-						user_id LIKE CONCAT('%', #{searchValue}, '%')
-						OR name LIKE CONCAT('%', #{searchValue}, '%')
-					)
-					</when>
-					<when test="searchColumn == 'user_id'">
-						AND user_id LIKE CONCAT('%', #{searchValue}, '%')
-					</when>
-					<when test="searchColumn == 'name'">
-						AND name LIKE CONCAT('%', #{searchValue}, '%')
-					</when>
-					<when test="searchColumn == 'nickname'">
-						AND nickname LIKE CONCAT('%', #{searchValue}, '%')
-					</when>
-				</choose>
-			</if>
-		</where>
-		<choose>
-			<when test="sortOption == 'created_date_desc'">
-				ORDER BY created_date DESC
-			</when>
-			<when test="sortOption == 'created_date_asc'">
-				ORDER BY created_date ASC
-			</when>
-			<when test="sortOption == 'user_id_desc'">
-				ORDER BY user_id DESC
-			</when>
-			<when test="sortOption == 'user_id_asc'">
-				ORDER BY user_id ASC
-			</when>
-			<when test="sortOption == 'name_desc'">
-				ORDER BY name DESC
-			</when>
-			<when test="sortOption == 'name_asc'">
-				ORDER BY name ASC
-			</when>
-			<when test="sortOption == 'nickname_desc'">
-				ORDER BY nickname DESC
-			</when>
-			<when test="sortOption == 'nickname_asc'">
-				ORDER BY nickname ASC
-			</when>
-			<otherwise>
-				ORDER BY created_date DESC
-			</otherwise>
-		</choose>
-		LIMIT #{size} OFFSET #{start}
+	  <where>
+	    <choose>
+	      <when test="filterType eq 'locked'">
+	        AND (
+	          (secession_yn = 'N' AND blacklisted = 'Y')
+	          OR status = 'N'
+	        )
+	      </when>
+	      <when test="filterType eq 'widthdrawn'">
+	        AND secession_yn = 'Y'
+	      </when>
+	      <otherwise>
+	        <if test="excludeGrades != null">
+	          grade_id NOT IN
+	          <foreach item="grade" collection="excludeGrades" open="(" separator="," close=")">
+	            #{grade}
+	          </foreach>
+	        </if>
+	        <if test="grade_id != null and grade_id != ''">
+	          AND grade_id = #{grade_id}
+	        </if>
+	        <if test="blacklisted != null">
+	          AND blacklisted = #{blacklisted}
+	        </if>
+	        <if test="status != null">
+	          AND status = #{status}
+	        </if>
+	        <if test="secession_yn != null">
+	          AND secession_yn = #{secession_yn}
+	        </if>
+	      </otherwise>
+	    </choose>
+	
+	    <if test="searchValue != null and searchValue !=''">
+	      <choose>
+	        <when test="searchColumn == null or searchColumn == ''">
+	          AND (
+	            user_id LIKE CONCAT('%', #{searchValue}, '%')
+	            OR name LIKE CONCAT('%', #{searchValue}, '%')
+	            OR nickname LIKE CONCAT('%', #{searchValue}, '%')
+	          )
+	        </when>
+	        <when test="searchColumn == 'user_id'">
+	          AND user_id LIKE CONCAT('%', #{searchValue}, '%')
+	        </when>
+	        <when test="searchColumn == 'name'">
+	          AND name LIKE CONCAT('%', #{searchValue}, '%')
+	        </when>
+	        <when test="searchColumn == 'nickname'">
+	          AND nickname LIKE CONCAT('%', #{searchValue}, '%')
+	        </when>
+	      </choose>
+	    </if>
+	  </where>
+	
+	  <choose>
+	    <when test="sortOption == 'created_date_desc'">
+	      ORDER BY created_date DESC
+	    </when>
+	    <when test="sortOption == 'created_date_asc'">
+	      ORDER BY created_date ASC
+	    </when>
+	    <when test="sortOption == 'user_id_desc'">
+	      ORDER BY user_id DESC
+	    </when>
+	    <when test="sortOption == 'user_id_asc'">
+	      ORDER BY user_id ASC
+	    </when>
+	    <when test="sortOption == 'name_desc'">
+	      ORDER BY name DESC
+	    </when>
+	    <when test="sortOption == 'name_asc'">
+	      ORDER BY name ASC
+	    </when>
+	    <otherwise>
+	      ORDER BY created_date DESC
+	    </otherwise>
+	  </choose>
+	  LIMIT #{size} OFFSET #{start}
 	</select>
 	
 	
 	<select id="countUserList" resultType="int">
 		SELECT count(distinct user_id) FROM tb_member
-		<where>
-		<choose>
-		  <when test="filterType eq 'locked'">
-		  	AND secession_yn = 'N'
-		    AND blacklisted = 'Y'
-		    OR status = 'N'
-		  </when>
-		  <when test="filterType eq 'widthdrawn'">
-		    AND secession_yn = 'Y'
-		  </when>
-		  <otherwise>
-		    <if test="excludeGrades != null">
-		      grade_id NOT IN
-		      <foreach item="grade" collection="excludeGrades" open="(" separator="," close=")">
-		        #{grade}
-		      </foreach>
-		    </if>
-		    <if test="grade_id != null and grade_id != ''">
-		      AND grade_id = #{grade_id}
-		    </if>
-		    <if test="blacklisted != null">
-		      AND blacklisted = #{blacklisted}
-		    </if>
-		    <if test="status != null">
-		      AND status = #{status}
-		    </if>
-		    <if test="secession_yn != null">
-		      AND secession_yn = #{secession_yn}
-		    </if>
-		  </otherwise>
-		</choose>
+		  <where>
+		    <choose>
+		      <when test="filterType eq 'locked'">
+		        AND (
+		          (secession_yn = 'N' AND blacklisted = 'Y')
+		          OR status = 'N'
+		        )
+		      </when>
+		      <when test="filterType eq 'widthdrawn'">
+		        AND secession_yn = 'Y'
+		      </when>
+		      <otherwise>
+		        <if test="excludeGrades != null">
+		          grade_id NOT IN
+		          <foreach item="grade" collection="excludeGrades" open="(" separator="," close=")">
+		            #{grade}
+		          </foreach>
+		        </if>
+		        <if test="grade_id != null and grade_id != ''">
+		          AND grade_id = #{grade_id}
+		        </if>
+		        <if test="blacklisted != null">
+		          AND blacklisted = #{blacklisted}
+		        </if>
+		        <if test="status != null">
+		          AND status = #{status}
+		        </if>
+		        <if test="secession_yn != null">
+		          AND secession_yn = #{secession_yn}
+		        </if>
+		      </otherwise>
+		    </choose>
 		
-		  <if test="status != null">
-		    AND status = #{status}
-		  </if>
-			<if test="searchValue != null and searchValue !=''">
-				<choose>
-					<when test="searchColumn == null or searchColumn == ''">
-					AND (
-						user_id LIKE CONCAT('%', #{searchValue}, '%')
-						OR name LIKE CONCAT('%', #{searchValue}, '%')
-					)
-					</when>
-					<when test="searchColumn == 'user_id'">
-						AND user_id LIKE CONCAT('%', #{searchValue}, '%')
-					</when>
-					<when test="searchColumn == 'name'">
-						AND name LIKE CONCAT('%', #{searchValue}, '%')
-					</when>
-					<when test="searchColumn == 'nickname'">
-						AND nickname LIKE CONCAT('%', #{searchValue}, '%')
-					</when>
-				</choose>
-			</if>
-		</where>
-		<choose>
-			<when test="sortOption == 'created_date_desc'">
-				ORDER BY created_date DESC
-			</when>
-			<when test="sortOption == 'created_date_asc'">
-				ORDER BY created_date ASC
-			</when>
-			<when test="sortOption == 'user_id_desc'">
-				ORDER BY user_id DESC
-			</when>
-			<when test="sortOption == 'user_id_asc'">
-				ORDER BY user_id ASC
-			</when>
-			<when test="sortOption == 'name_desc'">
-				ORDER BY name DESC
-			</when>
-			<when test="sortOption == 'name_asc'">
-				ORDER BY name ASC
-			</when>
-			<otherwise>
-				ORDER BY created_date DESC
-			</otherwise>
-		</choose>
-	</select>
+		    <if test="searchValue != null and searchValue !=''">
+		      <choose>
+		        <when test="searchColumn == null or searchColumn == ''">
+		          AND (
+		            user_id LIKE CONCAT('%', #{searchValue}, '%')
+		            OR name LIKE CONCAT('%', #{searchValue}, '%')
+		            OR nickname LIKE CONCAT('%', #{searchValue}, '%')
+		          )
+		        </when>
+		        <when test="searchColumn == 'user_id'">
+		          AND user_id LIKE CONCAT('%', #{searchValue}, '%')
+		        </when>
+		        <when test="searchColumn == 'name'">
+		          AND name LIKE CONCAT('%', #{searchValue}, '%')
+		        </when>
+		        <when test="searchColumn == 'nickname'">
+		          AND nickname LIKE CONCAT('%', #{searchValue}, '%')
+		        </when>
+		      </choose>
+		    </if>
+		  </where>
+		
+		  <choose>
+		    <when test="sortOption == 'created_date_desc'">
+		      ORDER BY created_date DESC
+		    </when>
+		    <when test="sortOption == 'created_date_asc'">
+		      ORDER BY created_date ASC
+		    </when>
+		    <when test="sortOption == 'user_id_desc'">
+		      ORDER BY user_id DESC
+		    </when>
+		    <when test="sortOption == 'user_id_asc'">
+		      ORDER BY user_id ASC
+		    </when>
+		    <when test="sortOption == 'name_desc'">
+		      ORDER BY name DESC
+		    </when>
+		    <when test="sortOption == 'name_asc'">
+		      ORDER BY name ASC
+		    </when>
+		    <otherwise>
+		      ORDER BY created_date DESC
+		    </otherwise>
+		  </choose>
+		</select>
 	
 	<update id="updateUser" parameterType="org.kosa.shoppingmaillmanager.user.User">
 	  UPDATE tb_member
@@ -287,7 +284,7 @@
 	
 	<update id="secessionUser">
 		UPDATE tb_member SET
-		secession_yn = 'Y',
+		secession_yn = #{secession_yn},
 		secession_date = NOW()
 		WHERE user_id = #{user_id}
 	</update>
@@ -298,4 +295,22 @@
 		ON h.user_id = m.user_id
 		where m.user_id = #{user_id}
 	</select>
+	
+	<update id="updateBlacklistStatus">
+	  UPDATE tb_member
+	  SET blacklisted = #{blacklisted}
+	  WHERE user_id IN
+	  <foreach collection="userIds" item="id" open="(" separator="," close=")">
+	    #{id}
+	  </foreach>
+	</update>
+	
+	<update id="updateUnlockStatus">
+	  UPDATE tb_member
+	  SET status = #{status}
+	  WHERE user_id IN
+	  <foreach collection="userIds" item="id" open="(" separator="," close=")">
+	    #{id}
+	  </foreach>
+	</update>
 </mapper>

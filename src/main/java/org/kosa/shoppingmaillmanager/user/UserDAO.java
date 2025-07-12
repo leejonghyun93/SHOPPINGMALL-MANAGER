@@ -23,7 +23,11 @@ public interface UserDAO {
 	public List<UserListDTO> getUserList(Map<String, Object> map);
 	public int countUserList(Map<String, Object> map);
 	public int updateUser(User user);
-	public int secessionUser(String user_id);
+	public int secessionUser(@Param("user_id") String user_id, @Param("secession_yn") String secession_yn);
 	public void updateHost(User user);
 	public Integer findByHostId(@Param("user_id") String loginUserId);
+	public int updateBlacklistStatus(@Param("userIds") List<String> userIds,
+            @Param("blacklisted") String blacklisted);
+	public int updateUnlockStatus(@Param("userIds") List<String> userIds, 
+			@Param("status") String status);
 }
