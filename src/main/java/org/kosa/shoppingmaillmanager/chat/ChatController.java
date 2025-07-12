@@ -30,17 +30,25 @@ public class ChatController {
 	
 	@MessageMapping("/sendMessage")
 	public void sendMessage(ChatMessageDTO message) {
-		
-		if (message.getType() == null || message.getType().isBlank()) {
-            message.setType("text");
-        }
-		
-		//욕설 필터링
-		message.setText(ChatFilterUtil.filterBadWords(message.getText()));
-		
-		chatService.saveChatMessage(message);
-		
-		//전체 채팅방에 뿌림
+
+	    if (message.getType() == null || message.getType().isBlank()) {
+	        message.setType("text");
+	    }
+
+	    // 금지된 유저인지 확인
+	    boolean banned = chatService.isUserBanned(message.getBroadcastId(), message.getUserId());
+	    if (banned) {
+	        log.warn("⛔ 금지된 유저의 메시지 차단됨: userId={}, 방송ID={}", message.getUserId(), message.getBroadcastId());
+	        return;
+	    }
+
+	    // 욕설 필터링
+	    message.setText(ChatFilterUtil.filterBadWords(message.getText()));
+
+	    // DB 저장
+	    chatService.saveChatMessage(message);
+
+	    // 전체 채팅방에 뿌림
 	    messagingTemplate.convertAndSend("/topic/public", message);
 	}
 	
@@ -69,6 +77,24 @@ public class ChatController {
 
 	    chatSessionManager.removeSessionManually(broadcastId, id);
 	    return ResponseEntity.ok().build();
+	}
+	
+	@PostMapping("/chat/ban")
+	public ResponseEntity<Void> banUserFromChat(
+			@RequestParam Long broadcastId,
+			@RequestParam String userId,
+			@RequestParam(defaultValue = "300") long durationSeconds) {
+		chatService.banUser(broadcastId, userId, durationSeconds);
+		return ResponseEntity.ok().build();
+	}
+	
+	@GetMapping("/chat/ban-status/{broadcastId}/{userId}")
+	public ResponseEntity<Map<String, Boolean>> checkUserBanStatus(
+	        @PathVariable Long broadcastId,
+	        @PathVariable String userId) {
+
+	    boolean banned = chatService.isUserBanned(broadcastId, userId);
+	    return ResponseEntity.ok(Map.of("banned", banned));
 	}
 }
 
